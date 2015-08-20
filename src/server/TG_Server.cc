@@ -56,7 +56,7 @@ static void* TG_Server_Thread(void* clientSockfdPtr)
     dataSize=atoi(strtok_r(readMsg," ",&savePtr)); //Get data volume (KB)
     tos=atoi(strtok_r(NULL," ",&savePtr)); //Get ToS
 
-    if(tos>0)
+    if(tos>0&&tos<=255)
         setsockopt(clientSockfd, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
 
     loop=dataSize*1024/BUFSIZ;  //Calculate send loop
