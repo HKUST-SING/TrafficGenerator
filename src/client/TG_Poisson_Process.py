@@ -18,36 +18,35 @@ class TG_Poisson_Thread(threading.Thread):
         threading.Thread.__init__(self)
 
     '''
-    return next time interval (microseconds)
+    return next time interval according to poisson process (microseconds)
     '''
     def nextTime(self):
         return -math.log(1.0-random.random())/self.avgReqRate*1000000
 
     def run(self):
+        global FCTs, flows
         while True:
-            startTime=datetime.datetime.now()
+            '''We have generated enough flows'''
+            if flows>=flowNum:
+                break
+            mutex.acquire()
+            flows=flows+1
+            mutex.release()
             '''Generate request and measure FCT'''
+            startTime=datetime.datetime.now()
             sender=self.senders[random.randint(0,len(self.senders)-1)]
             size=self.dist.genFlowSize()
             tos=random.randint(0,self.services-1)*4    #client and server socket share the same ToS value
             fct=self.client.request(sender, 5001, size, tos, tos)
-            global FCTs, flows, mutex
-            mutex.acquire()
             FCTs.append([size, fct])
-            flows=flows+1
-            mutex.release()
-            '''We have generated enough flows'''
-            if flows>=flowNum:
-                break
+            endTime=datetime.datetime.now()
+            expireTime=(endTime-startTime).total_seconds()*1000000  #expire time (us)
+            sleepTime=self.nextTime()-expireTime-self.deficit
+            if sleepTime>0:
+                self.deficit=0
+                time.sleep(sleepTime/1000000.0) #second to microsecond
             else:
-                endTime=datetime.datetime.now()
-                expireTime=(endTime-startTime).total_seconds()*1000000  #expire time (us)
-                sleepTime=self.nextTime()-expireTime-self.deficit
-                if sleepTime>0:
-                    self.deficit=0
-                    time.sleep(sleepTime/1000000.0) #second to microsecond
-                else:
-                    self.deficit=-sleepTime
+                self.deficit=-sleepTime
 
 
 if __name__=='__main__':
@@ -57,7 +56,6 @@ if __name__=='__main__':
         throughput=int(sys.argv[3])
         serviceNum=int(sys.argv[4])
         threadNum=int(sys.argv[5])
-        global flowNum
         flowNum=int(sys.argv[6])
         resultFileName=sys.argv[7]
 
@@ -70,13 +68,10 @@ if __name__=='__main__':
         dist=TG_Distribution(cdfFileName)
 
         '''Number of flows that have been generated'''
-        global flows
         flows=0
         '''FCT results'''
-        global FCTs
         FCTs=[]
         '''Lock'''
-        global mutex
         mutex=threading.Lock()
 
         '''Start threads'''
