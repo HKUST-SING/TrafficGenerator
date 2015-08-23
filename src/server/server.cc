@@ -1,6 +1,6 @@
 #include <iostream>
 #include <stdlib.h>
-#include "../lib/TG_Server.h"
+#include "TG_Server.h"
 
 using namespace std;
 

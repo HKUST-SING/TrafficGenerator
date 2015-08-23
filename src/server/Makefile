@@ -1,4 +1,4 @@
-server: server.cc ../lib/TG_Server.cc
-	g++ -o server server.cc ../lib/TG_Server.cc -lpthread -I../lib
+server: server.cc TG_Server.cc
+	g++ -o server server.cc TG_Server.cc -lpthread -I.
 clean:
 	rm server
