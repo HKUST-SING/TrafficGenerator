@@ -7,6 +7,10 @@ import datetime
 from TG_Distribution import TG_Distribution
 from TG_Client import TG_Client
 
+sys.path.append('/home/wei/TrafficGenerator/src/')
+from control.TG_Control import masterPort, TG_Control_Client
+
+
 class TG_Poisson_Thread(threading.Thread):
     def __init__(self, senders, dists, throughput, serviceNum, process):
         self.senders=senders    #sender list
@@ -58,6 +62,7 @@ class TG_Poisson_Thread(threading.Thread):
             else:
                 self.deficit=-sleepTime
 
+
 '''Generate many-to-one traffic using multiple threads'''
 class TG_Poisson_Process:
     def __init__(self, senders, throughput, threadNum, flowNum, resultFileName, serviceNum, cdfFileNames):
@@ -70,7 +75,7 @@ class TG_Poisson_Process:
         self.cdfFileNames=cdfFileNames
 
         if self.serviceNum!=len(self.cdfFileNames):
-            print 'No enough flow size CDF files'
+            print 'Unmatched flow size CDF files'
             sys.exit()
 
         '''Get distribution of different services'''
@@ -108,22 +113,42 @@ class TG_Poisson_Process:
 
 
 if __name__=='__main__':
-    if len(sys.argv)<8:
-        print 'Usage '+sys.argv[0]+' [senders file] [average throughput (Mbps)] [number of threads] [number of flows] [result file] [number of services (N)] [flow size CDF of service 1] ...[flow size CDF of service N]'
+    if len(sys.argv)<10:
+        print 'Usage '+sys.argv[0]+' [master] [local IP] [workers file] [average throughput (Mbps)] [number of threads] [number of flows] [result file] [number of services (N)] [flow size CDF of service 1] ...[flow size CDF of service N]'
         sys.exit()
 
-    senderFileName=sys.argv[1]
-    throughput=int(sys.argv[2])
-    threadNum=int(sys.argv[3])
-    flowNum=int(sys.argv[4])
-    resultFileName=sys.argv[5]
-    serviceNum=int(sys.argv[6])
-    cdfFileNames=sys.argv[7:]
+    master=sys.argv[1]
+    localIP=sys.argv[2]
+    workerFileName=sys.argv[3]
+    throughput=int(sys.argv[4])
+    threadNum=int(sys.argv[5])
+    flowNum=int(sys.argv[6])
+    resultFileName=sys.argv[7]
+    serviceNum=int(sys.argv[8])
+    cdfFileNames=sys.argv[9:]
 
-    '''Get destinations'''
-    senderFile=open(senderFileName)
-    senders=senderFile.readlines()
-    senderFile.close()
+    '''Get destinations. Note that we need to remove IP address of the worker itself'''
+    workerFile=open(workerFileName)
+    senders=[x.rstrip() for x in workerFile.readlines()]
+    workerFile.close()
+    if localIP in senders:
+        senders.remove(localIP)
+
+    '''print configureation'''
+    print 'Master: %s' % master
+    print 'Local IP address of the worker: %s' % localIP
+    print 'Senders: '+str(senders)
+    print 'Throughput: %d' % throughput
+    print 'Thread number: %d' % threadNum
+    print 'Flow number: %d' % flowNum
+    print 'Service number: %d' % serviceNum
+    print 'Flow size CDF files: '+str(cdfFileNames)
+    print 'Result file: %s' % resultFileName
 
     process=TG_Poisson_Process(senders, throughput, threadNum, flowNum, resultFileName, serviceNum, cdfFileNames)
     process.run()
+    print 'Finish!'
+
+    controlClient=TG_Control_Client()
+    controlClient.send(master, masterPort, localIP)
+    print 'Report to master %s' % (master)
