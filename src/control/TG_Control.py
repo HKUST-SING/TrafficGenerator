@@ -3,7 +3,6 @@ import threading
 import sys
 
 masterPort=10086
-finishWorkers=[]
 
 class TG_Control_Server_Thread(threading.Thread):
     def __init__(self, socket):
@@ -14,22 +13,21 @@ class TG_Control_Server_Thread(threading.Thread):
         data=self.socket.recv(8192)
         self.socket.close()
         print '%s finishes' % (data)
-        finishWorkers.append(data)
 
 class TG_Control_Server:
     def __init__(self):
         self.server=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    def run(self, port):
+    def run(self, port, workerNum):
         self.server.bind(('0.0.0.0', port))
         self.server.listen(socket.SOMAXCONN)
-        while True:
+        finishWorkerNum=0
+
+        while finishWorkerNum<workerNum:
             clientsocket, addr=self.server.accept()
             t=TG_Control_Server_Thread(clientsocket)
             t.start()
-
-    def stop(self):
-        self.server.close()
+            finishWorkerNum=finishWorkerNum+1
 
 class TG_Control_Client:
     def __init__(self):
@@ -42,4 +40,4 @@ class TG_Control_Client:
 
 if __name__=='__main__':
     server=TG_Control_Server()
-    server.run(masterPort)
+    server.run(masterPort,5)
