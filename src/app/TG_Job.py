@@ -6,17 +6,18 @@ import socket
 sys.path.append('/home/wei/TrafficGenerator/src/')
 from control.TG_Control import masterPort, TG_Control_Server
 from client.TG_Client import TG_Client
+import TG_Result
 
 user='root'
 path='/home/wei/TrafficGenerator'
 
 if __name__=='__main__':
     if len(sys.argv)<9:
-        print 'Usage '+sys.argv[0]+' [JobID] [master file] [workers file] [average throughput (Mbps)] [number of threads] [number of flows] [number of services (N)] [flow size CDF of service 1] ...[flow size CDF of service N]'
+        print 'Usage '+sys.argv[0]+' [JobID] [master] [workers file] [average throughput (Mbps)] [number of threads] [number of flows] [number of services (N)] [flow size CDF of service 1] ...[flow size CDF of service N]'
         sys.exit()
 
     jobID=sys.argv[1]
-    master=open(sys.argv[2]).readline().rstrip()
+    master=sys.argv[2]
     workers=[x.rstrip() for x in open(sys.argv[3]).readlines()]
     throughput=int(sys.argv[4])
     threadNum=int(sys.argv[5])
@@ -42,7 +43,7 @@ if __name__=='__main__':
 
     '''Start server'''
     for worker in workers:
-        cmd='ssh %s@%s \'cd %s/src/server/; make; killall server; nohup ./server 0.0.0.0 5001 %d >log.txt &\'' % (user, worker, path, socket.SOMAXCONN)
+        cmd='ssh %s@%s \'cd %s/src/server/; make; nohup ./server 0.0.0.0 5001 %d >log.txt &\'' % (user, worker, path, socket.SOMAXCONN)
         print cmd
         os.system(cmd)
         print 'Start server at %s' % (worker)
