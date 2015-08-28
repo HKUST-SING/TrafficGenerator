@@ -114,12 +114,12 @@ class TG_Poisson_Process:
 
 if __name__=='__main__':
     if len(sys.argv)<10:
-        print 'Usage '+sys.argv[0]+' [master] [local IP] [workers file] [average throughput (Mbps)] [number of threads] [number of flows] [result file] [number of services (N)] [flow size CDF of service 1] ...[flow size CDF of service N]'
+        print 'Usage: '+sys.argv[0]+' [master] [local IP] [senders file] [average throughput (Mbps)] [number of threads] [number of flows] [result file] [number of services (N)] [flow size CDF of service 1] ...[flow size CDF of service N]'
         sys.exit()
 
     master=sys.argv[1]
     localIP=sys.argv[2]
-    workerFileName=sys.argv[3]
+    senderFileName=sys.argv[3]
     throughput=int(sys.argv[4])
     threadNum=int(sys.argv[5])
     flowNum=int(sys.argv[6])
@@ -127,16 +127,16 @@ if __name__=='__main__':
     serviceNum=int(sys.argv[8])
     cdfFileNames=sys.argv[9:]
 
-    '''Get destinations. Note that we need to remove IP address of the worker itself'''
-    workerFile=open(workerFileName)
-    senders=[x.rstrip() for x in workerFile.readlines()]
-    workerFile.close()
+    '''Get destinations. Note that we need to remove IP address of the receiver itself'''
+    senderFile=open(senderFileName)
+    senders=[x.rstrip() for x in senderFile.readlines() if len(x.rstrip())>0]
+    senderFile.close()
     if localIP in senders:
         senders.remove(localIP)
 
     '''print configureation'''
     print 'Master: %s' % master
-    print 'Local IP address of the worker: %s' % localIP
+    print 'Local IP address of the receiver: %s' % localIP
     print 'Senders: '+str(senders)
     print 'Throughput: %d' % throughput
     print 'Thread number: %d' % threadNum
