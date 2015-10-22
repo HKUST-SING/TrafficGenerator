@@ -1,4 +1,6 @@
-server: server.cc TG_Server.cc
-	g++ -o server server.cc TG_Server.cc -lpthread -I.
+CC=gcc
+
+server: server.c ../common/common.c
+	$(CC) -o server.o server.c ../common/common.c -lpthread 
 clean:
-	rm server
+	rm server.o
