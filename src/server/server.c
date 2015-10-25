@@ -106,20 +106,20 @@ void* handle_connection(void* ptr)
         printf("Flow request: ID: %u Size: %u ToS: %u Rate: %u\n", flow_id, flow_size, flow_tos, flow_rate);
 
         /* echo back meta data */
-        if (write_exact(sockfd, buf, meta_data_size, meta_data_size, 0, flow_tos, false) != meta_data_size)
+        if (write_exact(sockfd, buf, meta_data_size, meta_data_size, 0, flow_tos, 0, false) != meta_data_size)
             break;
 
         /* generate a flow with flow_size bytes */
         if (flow_rate > 0)
         {
             /* Use flow_min_buf with rate limiting */
-            if (write_exact(sockfd, flow_min_buf, flow_size, TG_MIN_WRITE, flow_rate, flow_tos, true) != flow_size)
+            if (write_exact(sockfd, flow_min_buf, flow_size, TG_MIN_WRITE, flow_rate, flow_tos, TG_USLEEP_OVERHEAD_US, true) != flow_size)
                 break;
         }
         else
         {
             /* Use flow_max_buf w/o rate limiting */
-            if (write_exact(sockfd, flow_max_buf, flow_size, TG_MAX_WRITE, flow_rate, flow_tos, true) != flow_size)
+            if (write_exact(sockfd, flow_max_buf, flow_size, TG_MAX_WRITE, flow_rate, flow_tos, 0, true) != flow_size)
                 break;
         }
     }

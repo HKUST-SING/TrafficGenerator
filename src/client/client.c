@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
 
         gettimeofday(&tv_start, NULL);
 
-        if(write_exact(sockfd, buf, meta_data_size, meta_data_size, 0, flow_tos, false) != meta_data_size)
+        if(write_exact(sockfd, buf, meta_data_size, meta_data_size, 0, flow_tos, 0, false) != meta_data_size)
             error("Error: write meta data");
 
         if (read_exact(sockfd, buf, meta_data_size, meta_data_size, false) != meta_data_size)

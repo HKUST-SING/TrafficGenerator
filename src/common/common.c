@@ -70,8 +70,8 @@ unsigned int read_exact(int fd, char *buf, size_t count,
  * Users can rate-limit the sending of traffic. If rate_mbps is equal to 0, it indicates no rate-limiting.
  * Users can also set ToS value for traffic.
  */
-unsigned int write_exact(int fd, char *buf, size_t count,
-    size_t max_per_write, unsigned int rate_mbps, unsigned int tos, bool dummy_buf)
+unsigned int write_exact(int fd, char *buf, size_t count, size_t max_per_write,
+    unsigned int rate_mbps, unsigned int tos, unsigned int usleep_overhead_us, bool dummy_buf)
 {
     unsigned int bytes_total_write = 0;  //total number of bytes that have been written
     unsigned int bytes_to_write = 0; //maximum number of bytes to write in next send() call
@@ -107,8 +107,8 @@ unsigned int write_exact(int fd, char *buf, size_t count,
         {
             bytes_total_write += n;
             count -= n;
-            if (write_us < sleep_us)
-                usleep(sleep_us - write_us);
+            if (write_us + usleep_overhead_us < sleep_us)
+                usleep(sleep_us - write_us - usleep_overhead_us);
         }
     }
 
