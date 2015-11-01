@@ -13,6 +13,8 @@
 #include "../common/common.h"
 
 int servPort=TG_SERVER_PORT;
+unsigned int sleep_overhead_us=50;
+int debug_mode=0;
 char flow_max_buf[TG_MAX_WRITE]={1};
 char flow_min_buf[TG_MIN_WRITE]={1};
 
@@ -22,6 +24,8 @@ void print_usage(char *program);
 void read_args(int argc, char *argv[]);
 /* Handle an incomming connection */
 void* handle_connection(void* ptr);
+/* Get usleep overhead in microsecond (us) */
+unsigned int get_sleep_overhead(int iter_num);
 
 int main(int argc, char *argv[])
 {
@@ -30,10 +34,16 @@ int main(int argc, char *argv[])
     struct sockaddr_in cli_addr; //remote client address
     int sock_opt = 1;
     pthread_t serv_thread;   //server thread
-	int* sockfd_ptr=NULL;
-    socklen_t len=sizeof(struct sockaddr_in);
+	int* sockfd_ptr = NULL;
+    socklen_t len = sizeof(struct sockaddr_in);
 
+    /* Read arguments */
     read_args(argc, argv);
+
+    /* Calculate usleep overhead */
+    sleep_overhead_us=get_sleep_overhead(10);
+    if (debug_mode)
+        printf("usleep() overhead is around %u us\n", sleep_overhead_us);
 
     /* Initialize local server address */
     memset(&serv_addr, 0, sizeof(serv_addr));
@@ -82,20 +92,42 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+unsigned int get_sleep_overhead(int iter_num)
+{
+    int i=0;
+    unsigned int tot_sleep_us = 0;
+    struct timeval tv_start, tv_end;    //start and end time
+
+    if (iter_num <= 0)
+        return 0;
+
+    gettimeofday(&tv_start, NULL);
+    for(i = 0; i < iter_num; i ++)
+        usleep(0);
+    gettimeofday(&tv_end, NULL);
+    tot_sleep_us = (tv_end.tv_sec - tv_start.tv_sec) * 1000000 + tv_end.tv_usec - tv_start.tv_usec;
+
+    return tot_sleep_us/iter_num;
+}
+
 /* Handle an incomming connection */
 void* handle_connection(void* ptr)
 {
     unsigned int flow_id, flow_size, flow_tos, flow_rate;
     unsigned int meta_data_size = 4 * sizeof(unsigned int);
     char buf[meta_data_size]; // buffer to hold meta data
-    int sockfd=*(int*)ptr;
+    int sockfd = *(int*)ptr;
     free(ptr);
 
     while (1)
     {
         /* read meta-data */
         if (read_exact(sockfd, buf, meta_data_size, meta_data_size, false) != meta_data_size)
+        {
+            if (debug_mode)
+                printf("Cannot read meta-data\n");
             break;
+        }
 
         /* extract meta data */
         memcpy(&flow_id, buf, sizeof(unsigned int));
@@ -103,24 +135,37 @@ void* handle_connection(void* ptr)
         memcpy(&flow_tos, buf + 2 * sizeof(unsigned int), sizeof(unsigned int));
         memcpy(&flow_rate, buf + 3 * sizeof(unsigned int), sizeof(unsigned int));
 
-        printf("Flow request: ID: %u Size: %u ToS: %u Rate: %u\n", flow_id, flow_size, flow_tos, flow_rate);
+        if (debug_mode)
+            printf("Flow request: ID: %u Size: %u ToS: %u Rate: %u\n", flow_id, flow_size, flow_tos, flow_rate);
 
         /* echo back meta data */
         if (write_exact(sockfd, buf, meta_data_size, meta_data_size, 0, flow_tos, 0, false) != meta_data_size)
+        {
+            if (debug_mode)
+                printf("Cannot write meta-data\n");
             break;
+        }
 
         /* generate a flow with flow_size bytes */
         if (flow_rate > 0)
         {
             /* Use flow_min_buf with rate limiting */
-            if (write_exact(sockfd, flow_min_buf, flow_size, TG_MIN_WRITE, flow_rate, flow_tos, TG_USLEEP_OVERHEAD_US, true) != flow_size)
+            if (write_exact(sockfd, flow_min_buf, flow_size, TG_MIN_WRITE, flow_rate, flow_tos, sleep_overhead_us, true) != flow_size)
+            {
+                if (debug_mode)
+                    printf("Cannot write enough data into socket buffer with rate limiting\n");
                 break;
+            }
         }
         else
         {
             /* Use flow_max_buf w/o rate limiting */
             if (write_exact(sockfd, flow_max_buf, flow_size, TG_MAX_WRITE, flow_rate, flow_tos, 0, true) != flow_size)
+            {
+                if (debug_mode)
+                    printf("Cannot write enough data into socket buffer without rate limiting\n");
                 break;
+            }
         }
     }
 
@@ -132,14 +177,16 @@ void* handle_connection(void* ptr)
 void print_usage(char *program)
 {
     printf("Usage: %s [options]\n", program);
-    printf("-p <port>    port number (default %d)\n", TG_SERVER_PORT);
-    printf("-h           display help information\n");
+    printf("-p <port>   port number (default %d)\n", TG_SERVER_PORT);
+    printf("-d          debug mode (print necessary information)\n");
+    printf("-h          display help information\n");
 }
 
 /* Read command line arguments */
 void read_args(int argc, char *argv[])
 {
-    int i=1;
+    int i = 1;
+
     while (i < argc)
     {
         if (strlen(argv[i]) == 2 && strcmp(argv[i], "-p") == 0)
@@ -163,6 +210,11 @@ void read_args(int argc, char *argv[])
         {
             print_usage(argv[0]);
             exit(EXIT_SUCCESS);
+        }
+        else if (strlen(argv[i]) == 2 && strcmp(argv[i], "-d") == 0)
+        {
+            debug_mode = 1;
+            i += 1;
         }
         else
         {

@@ -12,8 +12,6 @@
 #define TG_MAX_WRITE 1048576 //1MB
 /* Minimum amount of data to write in a 'send' system call (used with rate limiting) */
 #define TG_MIN_WRITE 65536   //64KB
-/* usleep() overhead in us */
-#define TG_USLEEP_OVERHEAD_US 50
 
 
 /* I borrow following three functions from https://github.com/datacenter/empirical-traffic-gen. Thanks Mohammod! */

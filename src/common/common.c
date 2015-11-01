@@ -94,7 +94,7 @@ unsigned int write_exact(int fd, char *buf, size_t count, size_t max_per_write,
         gettimeofday(&tv_start, NULL);
         n = write(fd, cur_buf, bytes_to_write);
         gettimeofday(&tv_end, NULL);
-        write_us = (tv_end.tv_sec - tv_start.tv_sec) * 1000000 + (tv_end.tv_usec - tv_start.tv_usec);
+        write_us = (tv_end.tv_sec - tv_start.tv_sec) * 1000000 + tv_end.tv_usec - tv_start.tv_usec;
         sleep_us = (rate_mbps) ? n * 8 / rate_mbps : 0;
 
         if (n <= 0)
