@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
         fct_us = (tv_end.tv_sec - tv_start.tv_sec) * 1000000 + (tv_end.tv_usec - tv_start.tv_usec);
         goodput_mbps = flow_size * 8 / fct_us;
 
-        printf("Flow: ID: %u Size: %u ToS: %u Rate: %u\n", flow_id, flow_size, flow_tos, flow_rate);
+        printf("Flow: ID: %u\nSize: %u bytes ToS: %u Rate: %u Mbps\n", flow_id, flow_size, flow_tos, flow_rate);
         printf("FCT: %u us Goodput: %u Mbps\n", fct_us, goodput_mbps);
     }
 

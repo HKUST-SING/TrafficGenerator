@@ -78,8 +78,8 @@ unsigned int write_exact(int fd, char *buf, size_t count, size_t max_per_write,
     char *cur_buf = NULL;   //current location
     int n;  //number of bytes read in current read() call
     struct timeval tv_start, tv_end;    //start and end time of write
-    unsigned int sleep_us = 0;  //sleep time (us)
-    unsigned int write_us = 0;  //time used for write()
+    long sleep_us = 0;  //sleep time (us)
+    long write_us = 0;  //time used for write()
 
     if (setsockopt(fd, IPPROTO_IP, IP_TOS, &tos, sizeof(tos)) < 0)
     {
@@ -95,7 +95,7 @@ unsigned int write_exact(int fd, char *buf, size_t count, size_t max_per_write,
         n = write(fd, cur_buf, bytes_to_write);
         gettimeofday(&tv_end, NULL);
         write_us = (tv_end.tv_sec - tv_start.tv_sec) * 1000000 + tv_end.tv_usec - tv_start.tv_usec;
-        sleep_us = (rate_mbps) ? n * 8 / rate_mbps : 0;
+        sleep_us += (rate_mbps) ? n * 8 / rate_mbps - write_us : 0;
 
         if (n <= 0)
         {
@@ -107,8 +107,11 @@ unsigned int write_exact(int fd, char *buf, size_t count, size_t max_per_write,
         {
             bytes_total_write += n;
             count -= n;
-            if (write_us + usleep_overhead_us < sleep_us)
-                usleep(sleep_us - write_us - usleep_overhead_us);
+            if (usleep_overhead_us < sleep_us)
+            {
+                usleep(sleep_us - usleep_overhead_us);
+                sleep_us = 0;
+            }
         }
     }
 

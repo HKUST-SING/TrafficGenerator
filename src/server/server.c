@@ -136,7 +136,7 @@ void* handle_connection(void* ptr)
         memcpy(&flow_rate, buf + 3 * sizeof(unsigned int), sizeof(unsigned int));
 
         if (debug_mode)
-            printf("Flow request: ID: %u Size: %u ToS: %u Rate: %u\n", flow_id, flow_size, flow_tos, flow_rate);
+            printf("Flow request: ID: %u Size: %u bytes ToS: %u Rate: %u Mbps\n", flow_id, flow_size, flow_tos, flow_rate);
 
         /* echo back meta data */
         if (write_exact(sockfd, buf, meta_data_size, meta_data_size, 0, flow_tos, 0, false) != meta_data_size)
