@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <string.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -123,4 +124,15 @@ void error(char *msg)
 {
     perror(msg);
     exit(EXIT_FAILURE);
+}
+
+/* Remove \r \n from a string */
+void remove_newline(char *str)
+{
+    int i = 0;
+    for (i = 0; i < strlen(str); i++)
+    {
+        if (str[i] == '\r' || str[i] == '\n')
+            str[i] = '\0';
+    }
 }

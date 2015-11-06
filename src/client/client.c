@@ -2,212 +2,129 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <math.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/tcp.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/time.h>
+#include <pthread.h>
 
 #include "../common/common.h"
 
-char servIP[16]={'\0'}; //sender IP address
-char flow_max_buf[TG_MAX_WRITE]={'\0'};
-int servPort=TG_SERVER_PORT;    //sender TCP port
-unsigned int flow_size=1024; //flow size in bytes
-unsigned int flow_tos=0;  //ToS value of flows
-unsigned int flow_number=10;  //number of flows
-unsigned int flow_rate=0; //sending rate of flows
+#ifndef max
+    #define max(a,b) ((a) > (b) ? (a) : (b))
+#endif
+
+char config_file_name[80] = {'\0'}; //configuration file name
+char dist_file_name[80] = {'\0'};   //size distribution file name
+char fct_log_name[] = "flows.txt";
+char rct_log_name[] = "reqs.txt";
+int seed = 0; //random seed
+
+/* parameters of servers */
+int num_server = 0; //total number of servers
+int *server_port = NULL;   //ports of servers
+char (*server_addr)[20] = NULL;    //IP addresses of servers
+
+int num_fanout = 0;    //Number of fanouts
+int *fanout_size = NULL;
+int *fanout_prob = NULL;
+int fanout_prob_total = 0;
+
+int num_service = 0; //Number of services
+int *service_dscp = NULL;
+int *service_prob = NULL;
+int service_prob_total = 0;
+
+int num_rate = 0; //Number of sending rates
+int *rate_value = NULL;
+int *rate_prob = NULL;
+int rate_prob_total = 0;
+
+double load = 0; //Network load (Mbps)
+int req_total_num = 0; //Total number of requests
+
 
 /* Print usage of the program */
 void print_usage(char *program);
 /* Read command line arguments */
 void read_args(int argc, char *argv[]);
+/* Read configuration file */
+void read_config(char *file_name);
+/* Clean up resources */
+void cleanup();
 
 int main(int argc, char *argv[])
 {
-    unsigned int i = 0;
-    unsigned int flow_id = 0;
-    struct timeval tv_start, tv_end;    //start and end time
-    int sockfd; //Socket
-    int sock_opt = 1;
-    struct sockaddr_in serv_addr;   //Server address
-    unsigned int meta_data_size = 4 * sizeof(unsigned int);
-    char buf[4 * sizeof(unsigned int)] = {'\0'}; // buffer to hold meta data
-    unsigned int fct_us;
-    unsigned int goodput_mbps;
+    struct timeval time;    //record current system time
 
-    read_args(argc,argv);
+    read_args(argc, argv);
 
-    memset(&serv_addr, 0, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = inet_addr(servIP);
-    serv_addr.sin_port = htons(servPort);
-
-    /* Initialize server socket */
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0)
-        error("Error: initialize socket");
-
-    /* Set socket options */
-    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &sock_opt, sizeof(sock_opt)) < 0)
-        error("Error: set SO_REUSEADDR option");
-    if (setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, &sock_opt, sizeof(sock_opt)) < 0)
-        error("ERROR: set TCP_NODELAY option");
-    if (setsockopt(sockfd, IPPROTO_IP, IP_TOS, &flow_tos, sizeof(flow_tos)) < 0)
-        error("Error: set IP_TOS option");
-
-    if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
-        error("Error: connect");
-
-    for (i = 0; i < flow_number; i ++)
+    if (seed == 0)
     {
-        printf("Generate flow request %u\n", i);
-
-        /* fill in meta data */
-        memcpy(buf, &i, sizeof(unsigned int));
-        memcpy(buf + sizeof(unsigned int), &flow_size, sizeof(unsigned int));
-        memcpy(buf + 2 * sizeof(unsigned int), &flow_tos, sizeof(unsigned int));
-        memcpy(buf + 3 * sizeof(unsigned int), &flow_rate, sizeof(unsigned int));
-
-        gettimeofday(&tv_start, NULL);
-
-        if(write_exact(sockfd, buf, meta_data_size, meta_data_size, 0, flow_tos, 0, false) != meta_data_size)
-            error("Error: write meta data");
-
-        if (read_exact(sockfd, buf, meta_data_size, meta_data_size, false) != meta_data_size)
-            error("Error: read meata data");
-
-        /* extract meta data */
-        memcpy(&flow_id, buf, sizeof(unsigned int));
-        memcpy(&flow_size, buf + sizeof(unsigned int), sizeof(unsigned int));
-        memcpy(&flow_tos, buf + 2 * sizeof(unsigned int), sizeof(unsigned int));
-        memcpy(&flow_rate, buf + 3 * sizeof(unsigned int), sizeof(unsigned int));
-
-        if (read_exact(sockfd, flow_max_buf, flow_size, TG_MAX_WRITE, true) != flow_size)
-            error("Error: receive flow");
-
-        gettimeofday(&tv_end, NULL);
-        fct_us = (tv_end.tv_sec - tv_start.tv_sec) * 1000000 + (tv_end.tv_usec - tv_start.tv_usec);
-        goodput_mbps = flow_size * 8 / fct_us;
-
-        printf("Flow: ID: %u\nSize: %u bytes ToS: %u Rate: %u Mbps\n", flow_id, flow_size, flow_tos, flow_rate);
-        printf("FCT: %u us Goodput: %u Mbps\n", fct_us, goodput_mbps);
+        gettimeofday(&time, NULL);
+        srand((time.tv_sec*1000000) + time.tv_usec);
     }
+    else
+        srand(seed);
 
-    close(sockfd);
+    read_config(config_file_name);
+
+    cleanup();
+
     return 0;
 }
 
+/* Print usage of the program */
 void print_usage(char *program)
 {
     printf("Usage: %s [options]\n", program);
-    printf("-s <sender>        IP address of sender\n");
-    printf("-p <port>          port number (default %d)\n", TG_SERVER_PORT);
-    printf("-n <bytes>         flow size in bytes (default %u)\n", flow_size);
-    printf("-q <tos>           Type of Service (ToS) value (default %u)\n", flow_tos);
-    printf("-c <count>         number of flows (default %u)\n", flow_number);
-    printf("-r <rate (Mbps)>   sending rate of flows (default 0: no rate limiting)\n");
-    printf("-h                 display help information\n");
+    printf("-c <file>    configuration file name (required)\n");
+    printf("-s <seed>    random seed value (default current time)\n");
+    printf("-h           display help information\n");
 }
 
+/* Read command line arguments */
 void read_args(int argc, char *argv[])
 {
-    int i=1;
+    int i = 1;
+
+    if (argc == 1)
+    {
+        print_usage(argv[0]);
+        exit(EXIT_SUCCESS);
+    }
+
     while (i < argc)
     {
-        if (strlen(argv[i]) == 2 && strcmp(argv[i], "-s") == 0)
+        if (strlen(argv[i]) == 2 && strcmp(argv[i], "-c") == 0)
         {
-            if (i+1 < argc)
+            if (i+1 < argc && strlen(argv[i+1]) < sizeof(config_file_name))
             {
-                if (strlen(argv[i+1]) <= 15)
-                    strncpy(servIP, argv[i+1], strlen(argv[i+1]));
-                else
-                    error("Illegal IP address\n");
-                //printf("Server IP address %s\n", servIP);
+                sprintf(config_file_name, "%s", argv[i+1]);
                 i += 2;
             }
             /* cannot read IP address */
             else
             {
-                printf("Cannot read IP address\n");
+                printf("Cannot read configuration file name\n");
                 print_usage(argv[0]);
                 exit(EXIT_FAILURE);
             }
         }
-        else if (strlen(argv[i]) == 2 && strcmp(argv[i], "-p") == 0)
+        else if (strlen(argv[i]) == 2 && strcmp(argv[i], "-s") == 0)
         {
             if (i+1 < argc)
             {
-                servPort = atoi(argv[i+1]);
-                if (servPort < 0 || servPort > 65535)
-                    error("Illegal port number");
+                seed = atoi(argv[i+1]);
                 i += 2;
             }
             /* cannot read port number */
             else
             {
-                printf("Cannot read port number\n");
-                print_usage(argv[0]);
-                exit(EXIT_FAILURE);
-            }
-        }
-        else if (strlen(argv[i]) == 2 && strcmp(argv[i], "-n") == 0)
-        {
-            if (i+1 < argc)
-            {
-                sscanf(argv[i+1], "%u", &flow_size);
-                i += 2;
-            }
-            /* cannot read flow size */
-            else
-            {
-                printf("Cannot read flow size\n");
-                print_usage(argv[0]);
-                exit(EXIT_FAILURE);
-            }
-        }
-        else if (strlen(argv[i]) == 2 && strcmp(argv[i], "-q") == 0)
-        {
-            if (i+1 < argc)
-            {
-                sscanf(argv[i+1], "%u", &flow_tos);
-                i += 2;
-            }
-            /* cannot read ToS value */
-            else
-            {
-                printf("Cannot read ToS\n");
-                print_usage(argv[0]);
-                exit(EXIT_FAILURE);
-            }
-        }
-        else if (strlen(argv[i]) == 2 && strcmp(argv[i], "-c") == 0)
-        {
-            if (i+1 < argc)
-            {
-                sscanf(argv[i+1], "%u", &flow_number);
-                i += 2;
-            }
-            /* cannot read number of flows */
-            else
-            {
-                printf("Cannot read number of flows\n");
-                print_usage(argv[0]);
-                exit(EXIT_FAILURE);
-            }
-        }
-        else if (strlen(argv[i]) == 2 && strcmp(argv[i], "-r") == 0)
-        {
-            if (i+1 < argc)
-            {
-                sscanf(argv[i+1], "%u", &flow_rate);
-                i += 2;
-            }
-            /* cannot read sending rate of flows */
-            else
-            {
-                printf("Cannot read sending rate of flows\n");
+                printf("Cannot read seed value\n");
                 print_usage(argv[0]);
                 exit(EXIT_FAILURE);
             }
@@ -224,4 +141,188 @@ void read_args(int argc, char *argv[])
             exit(EXIT_FAILURE);
         }
     }
+}
+
+/* Read configuration file */
+void read_config(char *file_name)
+{
+    FILE *fd=NULL;
+    char line[256]={'\0'};
+    char key[80]={'\0'};
+    num_server = 0;    //Number of senders
+    int num_load = 0;   //Number of network loads
+    int num_req = 0;    //Number of requests
+    int num_dist = 0;   //Number of flow size distributions
+    num_fanout = 0;    //Number of fanouts (optional)
+    num_service = 0; //Number of services (optional)
+    num_rate = 0; //Number of sending rates (optional)
+
+    printf("Reading configuration file %s\n", file_name);
+
+    /* Parse configuration file for the first time */
+    fd = fopen(file_name, "r");
+    if (!fd)
+        error("Error: fopen");
+
+    while (fgets(line, sizeof(line), fd) != NULL)
+    {
+        sscanf(line, "%s", key);
+        if (!strcmp(key, "server"))
+            num_server++;
+        else if (!strcmp(key, "load"))
+            num_load++;
+        else if (!strcmp(key, "num_reqs"))
+            num_req++;
+        else if (!strcmp(key, "req_size_dist"))
+            num_dist++;
+        else if (!strcmp(key, "fanout"))
+            num_fanout++;
+        else if (!strcmp(key, "service"))
+            num_service++;
+        else if (!strcmp(key, "rate"))
+            num_rate++;
+        else
+            error("Error: invalid key in configuration file");
+    }
+
+    fclose(fd);
+
+    if (num_server < 1)
+        error("Error: configuration file should provide at least one server");
+    if (num_load != 1)
+        error("Error: configuration file should provide one network load");
+    if (num_req != 1)
+        error("Error: configuration file should provide one total number of requests");
+    if (num_dist != 1)
+        error("Error: configuration file should provide one request size distribution");
+
+    /* Initialize configuration */
+    /* server IP addresses and ports */
+    server_port = (int*)malloc(num_server);
+    server_addr = (char (*)[20])malloc(num_server * sizeof(char[20]));
+    /* fanout size and probability */
+    fanout_size = (int*)malloc(max(num_fanout, 1) * sizeof(int));
+    fanout_prob = (int*)malloc(max(num_fanout, 1) * sizeof(int));
+    /* service DSCP and probability */
+    service_dscp = (int*)malloc(max(num_service, 1) * sizeof(int));
+    service_prob = (int*)malloc(max(num_service, 1) * sizeof(int));
+    /* sending rate value and probability */
+    rate_value = (int*)malloc(max(num_rate, 1) * sizeof(int));
+    rate_prob = (int*)malloc(max(num_rate, 1) * sizeof(int));
+
+    if (!server_port || !server_addr || !fanout_size || !fanout_prob || !service_dscp || !service_prob || !rate_value || !rate_prob)
+    {
+        cleanup();
+        error("Error: malloc");
+    }
+
+    /* Second time */
+    num_server = 0;
+    num_fanout = 0;
+    num_service = 0;
+    num_rate = 0;
+
+    fd = fopen(file_name, "r");
+    if (!fd)
+    {
+        error("Error: fopen");
+        cleanup();
+    }
+
+    while (fgets(line, sizeof(line), fd) != NULL)
+    {
+        remove_newline(line);
+        sscanf(line, "%s", key);
+
+        if (!strcmp(key, "server"))
+        {
+            sscanf(line, "%s %s %d", key, server_addr[num_server], &server_port[num_server]);
+            printf("Server[%d]: %s, Port: %d\n", num_server, server_addr[num_server], server_port[num_server]);
+            num_server++;
+        }
+        else if (!strcmp(key, "load"))
+        {
+            sscanf(line, "%s %lfMbps", key, &load);
+            printf("Network Load: %.2f Mbps\n", load);
+        }
+        else if (!strcmp(key, "num_reqs"))
+        {
+            sscanf(line, "%s %d", key, &req_total_num);
+            printf("Number of Requests: %d\n", req_total_num);
+        }
+        else if (!strcmp(key, "req_size_dist"))
+        {
+            sscanf(line, "%s %s", key, dist_file_name);
+            printf("Loading request size distribution: %s\n", dist_file_name);
+        }
+        else if (!strcmp(key, "fanout"))
+        {
+            sscanf(line, "%s %d %d", key, &fanout_size[num_fanout], &fanout_prob[num_fanout]);
+            fanout_prob_total += fanout_prob[num_fanout];
+            printf("Fanout: %d, Prob: %d\n", fanout_size[num_fanout], fanout_prob[num_fanout]);
+            num_fanout++;
+        }
+        else if (!strcmp(key, "service"))
+        {
+            sscanf(line, "%s %d %d", key, &service_dscp[num_service], &service_prob[num_service]);
+            service_prob_total += service_prob[num_service];
+            printf("Service DSCP: %d, Prob: %d\n", service_dscp[num_service], service_prob[num_service]);
+            num_service++;
+        }
+        else if (!strcmp(key, "rate"))
+        {
+            sscanf(line, "%s %dMbps %d", key, &rate_value[num_rate], &rate_prob[num_rate]);
+            rate_prob_total += rate_prob[num_rate];
+            printf("Rate: %dMbps, Prob: %d\n", rate_value[num_rate], rate_prob[num_rate]);
+            num_rate++;
+        }
+    }
+
+    fclose(fd);
+
+    /* By default, fanout size is always 1 */
+    if (num_fanout == 0)
+    {
+        num_fanout = 1;
+        fanout_size[0] = 1;
+        fanout_prob[0] = 100;
+        fanout_prob_total = fanout_prob[0];
+        printf("Fanout: %d, Prob: %d\n", fanout_size[0], fanout_prob[0]);
+    }
+
+    /* By default, DSCP value is 0 */
+    if (num_service == 0)
+    {
+        num_service = 1;
+        service_dscp[0] = 0;
+        service_prob[0] = 100;
+        service_prob_total = service_prob[0];
+        printf("Service DSCP: %d, Prob: %d\n", service_dscp[0], service_prob[0]);
+    }
+
+    /* By default, no rate limiting */
+    if (num_rate == 0)
+    {
+        num_rate = 1;
+        rate_value[0] = 0;
+        rate_prob[0] = 100;
+        rate_prob_total = rate_prob[0];
+        printf("Rate: %dMbps, Prob: %d\n", rate_value[0], rate_prob[0]);
+    }
+}
+
+/* Clean up resources */
+void cleanup()
+{
+    free(server_port);
+    free(server_addr);
+
+    free(fanout_size);
+    free(fanout_prob);
+
+    free(service_dscp);
+    free(service_prob);
+
+    free(rate_value);
+    free(rate_prob);
 }
