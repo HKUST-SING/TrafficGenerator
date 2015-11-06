@@ -12,11 +12,11 @@
 
 #include "../common/common.h"
 
-int servPort=TG_SERVER_PORT;
-unsigned int sleep_overhead_us=50;
-int debug_mode=0;
-char flow_max_buf[TG_MAX_WRITE]={1};
-char flow_min_buf[TG_MIN_WRITE]={1};
+int servPort = TG_SERVER_PORT;
+unsigned int sleep_overhead_us = 50;
+int debug_mode = 0;
+char flow_max_buf[TG_MAX_WRITE] = {1};
+char flow_min_buf[TG_MIN_WRITE] = {1};
 
 /* Print usage of the program */
 void print_usage(char *program);
@@ -187,6 +187,12 @@ void read_args(int argc, char *argv[])
 {
     int i = 1;
 
+    if (argc == 1)
+    {
+        print_usage(argv[0]);
+        exit(EXIT_SUCCESS);
+    }
+    
     while (i < argc)
     {
         if (strlen(argv[i]) == 2 && strcmp(argv[i], "-p") == 0)
