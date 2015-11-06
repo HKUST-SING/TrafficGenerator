@@ -12,9 +12,13 @@
 #include <pthread.h>
 
 #include "../common/common.h"
+#include "../common/cdf.h"
 
 #ifndef max
     #define max(a,b) ((a) > (b) ? (a) : (b))
+#endif
+#ifndef min
+    #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
 char config_file_name[80] = {'\0'}; //configuration file name
@@ -46,6 +50,7 @@ int rate_prob_total = 0;
 double load = 0; //Network load (Mbps)
 int req_total_num = 0; //Total number of requests
 
+struct CDF_Table* req_size_dist;
 
 /* Print usage of the program */
 void print_usage(char *program);
@@ -59,6 +64,7 @@ void cleanup();
 int main(int argc, char *argv[])
 {
     struct timeval time;    //record current system time
+    int i = 0;
 
     read_args(argc, argv);
 
@@ -71,6 +77,9 @@ int main(int argc, char *argv[])
         srand(seed);
 
     read_config(config_file_name);
+
+    for (i = 0; i < 10; i++)
+        printf("%.2f\n",gen_random_CDF(req_size_dist));
 
     cleanup();
 
@@ -254,6 +263,15 @@ void read_config(char *file_name)
         {
             sscanf(line, "%s %s", key, dist_file_name);
             printf("Loading request size distribution: %s\n", dist_file_name);
+
+            req_size_dist = (struct CDF_Table*)malloc(sizeof(struct CDF_Table));
+            if (!req_size_dist)
+                error("Error: malloc");
+
+            init_CDF(req_size_dist);
+            load_CDF(req_size_dist, dist_file_name);
+            print_CDF(req_size_dist);
+            printf("Average request size is %.2f bytes\n", avg_CDF(req_size_dist));
         }
         else if (!strcmp(key, "fanout"))
         {
@@ -309,6 +327,7 @@ void read_config(char *file_name)
         rate_prob_total = rate_prob[0];
         printf("Rate: %dMbps, Prob: %d\n", rate_value[0], rate_prob[0]);
     }
+
 }
 
 /* Clean up resources */
@@ -325,4 +344,7 @@ void cleanup()
 
     free(rate_value);
     free(rate_prob);
+
+    free_CDF(req_size_dist);
+    free(req_size_dist);
 }
