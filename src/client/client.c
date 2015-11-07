@@ -49,8 +49,8 @@ int rate_prob_total = 0;
 
 double load = 0; //Network load (Mbps)
 int req_total_num = 0; //Total number of requests
-
 struct CDF_Table* req_size_dist;
+int period_us;  //Average request arrival interval (us)
 
 /* Print usage of the program */
 void print_usage(char *program);
@@ -65,6 +65,8 @@ int main(int argc, char *argv[])
 {
     struct timeval time;    //record current system time
     int i = 0;
+    unsigned long req_size_total = 0;
+    unsigned long req_interval_total = 0;
 
     read_args(argc, argv);
 
@@ -78,8 +80,13 @@ int main(int argc, char *argv[])
 
     read_config(config_file_name);
 
-    for (i = 0; i < 10; i++)
-        printf("%.2f\n",gen_random_CDF(req_size_dist));
+    for (i = 0; i < 10000; i++)
+    {
+        req_size_total += gen_random_CDF(req_size_dist);
+        req_interval_total += poission_gen_interval(1.0/period_us);
+    }
+
+    printf("===============\nWe generate %d requests.\nThe average arrival interval is %lu us.\nThe average request size is %lu bytes.\n", i, req_interval_total/i, req_size_total/i);
 
     cleanup();
 
@@ -234,8 +241,8 @@ void read_config(char *file_name)
     fd = fopen(file_name, "r");
     if (!fd)
     {
-        error("Error: fopen");
         cleanup();
+        error("Error: fopen");
     }
 
     while (fgets(line, sizeof(line), fd) != NULL)
@@ -271,7 +278,7 @@ void read_config(char *file_name)
             init_CDF(req_size_dist);
             load_CDF(req_size_dist, dist_file_name);
             print_CDF(req_size_dist);
-            printf("Average request size is %.2f bytes\n", avg_CDF(req_size_dist));
+            printf("Average request size: %.2f bytes\n", avg_CDF(req_size_dist));
         }
         else if (!strcmp(key, "fanout"))
         {
@@ -328,6 +335,21 @@ void read_config(char *file_name)
         printf("Rate: %dMbps, Prob: %d\n", rate_value[0], rate_prob[0]);
     }
 
+    if (load > 0)
+    {
+        period_us = avg_CDF(req_size_dist) * 8 / load;
+        if (period_us <= 0)
+        {
+            cleanup();
+            error("Error: period_us is not positive");
+        }
+        printf("Average request arrival interval: %d us\n", period_us);
+    }
+    else
+    {
+        cleanup();
+        error("Error: load is not positive");
+    }
 }
 
 /* Clean up resources */

@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -pthread
+CFLAGS = -Wall -pthread -lm
 TARGETS = server client simple-client
 BIN_DIR = bin
 SRC_DIR = src

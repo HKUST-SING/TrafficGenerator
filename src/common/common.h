@@ -29,4 +29,7 @@ void error(char *msg);
 /* Remove \r \n from a string */
 void remove_newline(char *str);
 
+/* Generate poission process arrival interval */
+double poission_gen_interval(double avg_rate);
+
 #endif
