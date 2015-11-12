@@ -147,3 +147,39 @@ double poission_gen_interval(double avg_rate)
     else
         return 0;
 }
+
+/* Calculate usleep overhead */
+unsigned int get_usleep_overhead(int iter_num)
+{
+    int i=0;
+    unsigned int tot_sleep_us = 0;
+    struct timeval tv_start, tv_end;    //start and end time
+
+    if (iter_num <= 0)
+        return 0;
+
+    gettimeofday(&tv_start, NULL);
+    for(i = 0; i < iter_num; i ++)
+        usleep(0);
+    gettimeofday(&tv_end, NULL);
+    tot_sleep_us = (tv_end.tv_sec - tv_start.tv_sec) * 1000000 + tv_end.tv_usec - tv_start.tv_usec;
+
+    return tot_sleep_us/iter_num;
+}
+
+/* Randomly generate value based on weights */
+int gen_value_weight(int *values, int *weights, int len, int weight_total)
+{
+    int i = 0;
+    int val = rand() % weight_total;
+
+    for (i = 0; i < len; i++)
+    {
+        if (val < weights[i])
+            return values[i];
+        else
+            val -= weights[i];
+    }
+
+    return values[len - 1];
+}

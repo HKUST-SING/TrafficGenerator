@@ -32,4 +32,10 @@ void remove_newline(char *str);
 /* Generate poission process arrival interval */
 double poission_gen_interval(double avg_rate);
 
+/* Calculate usleep overhead */
+unsigned int get_usleep_overhead(int iter_num);
+
+/* Randomly generate a value based on weights */
+int gen_value_weight(int *values, int *weights, int len, int weight_total);
+
 #endif

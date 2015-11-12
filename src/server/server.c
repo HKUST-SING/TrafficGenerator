@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
     read_args(argc, argv);
 
     /* Calculate usleep overhead */
-    sleep_overhead_us=get_sleep_overhead(10);
+    sleep_overhead_us = get_usleep_overhead(10);
     if (debug_mode)
         printf("usleep() overhead is around %u us\n", sleep_overhead_us);
 
@@ -90,24 +90,6 @@ int main(int argc, char *argv[])
     }
 
     return 0;
-}
-
-unsigned int get_sleep_overhead(int iter_num)
-{
-    int i=0;
-    unsigned int tot_sleep_us = 0;
-    struct timeval tv_start, tv_end;    //start and end time
-
-    if (iter_num <= 0)
-        return 0;
-
-    gettimeofday(&tv_start, NULL);
-    for(i = 0; i < iter_num; i ++)
-        usleep(0);
-    gettimeofday(&tv_end, NULL);
-    tot_sleep_us = (tv_end.tv_sec - tv_start.tv_sec) * 1000000 + tv_end.tv_usec - tv_start.tv_usec;
-
-    return tot_sleep_us/iter_num;
 }
 
 /* Handle an incomming connection */
@@ -192,7 +174,7 @@ void read_args(int argc, char *argv[])
         print_usage(argv[0]);
         exit(EXIT_SUCCESS);
     }
-    
+
     while (i < argc)
     {
         if (strlen(argv[i]) == 2 && strcmp(argv[i], "-p") == 0)
