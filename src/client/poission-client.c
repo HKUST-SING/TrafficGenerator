@@ -13,6 +13,7 @@
 
 #include "../common/common.h"
 #include "../common/cdf.h"
+#include "../common/conn.h"
 
 #ifndef max
     #define max(a,b) ((a) > (b) ? (a) : (b))
@@ -25,7 +26,8 @@ char config_file_name[80] = {'\0'}; //configuration file name
 char dist_file_name[80] = {'\0'};   //size distribution file name
 char fct_log_name[80] = "flows.txt";    //default log file name
 int seed = 0; //random seed
-unsigned int sleep_overhead_us = 0; //usleep overhead
+unsigned int usleep_overhead_us = 0; //usleep overhead
+struct timeval tv_start, tv_end; //start and end time of traffic
 
 /* per-server variables */
 int num_server = 0; //total number of servers
@@ -57,6 +59,8 @@ int *req_sleep_us = NULL; //sleep time interval
 struct timeval *req_start_time; //start time of flow
 struct timeval *req_stop_time;  //stop time of flow
 
+struct Conn_List* connection_lists = NULL; //connection pool
+
 /* Print usage of the program */
 void print_usage(char *program);
 /* Read command line arguments */
@@ -65,12 +69,25 @@ void read_args(int argc, char *argv[]);
 void read_config(char *file_name);
 /* Set request variables */
 void set_req_variables();
+/* Receive traffic from established connections */
+void *listen_connection(void *ptr);
+/* Generate flow requests */
+void run_requests();
+/* Generate a flow request to the server */
+void run_request(unsigned int req_id);
+/* Terminate all existing connections */
+void exit_connections();
+/* Terminate a connection */
+void exit_connection(struct Conn_Node* node);
 /* Clean up resources */
 void cleanup();
+/* Print statistic */
+void print_statistic();
 
 int main(int argc, char *argv[])
 {
-    struct timeval time;
+    int i = 0;
+    struct Conn_Node* ptr = NULL;
 
     /* read program arguments */
     read_args(argc, argv);
@@ -78,8 +95,8 @@ int main(int argc, char *argv[])
     /* set seed value for random number generation */
     if (seed == 0)
     {
-        gettimeofday(&time, NULL);
-        srand((time.tv_sec*1000000) + time.tv_usec);
+        gettimeofday(&tv_start, NULL);
+        srand((tv_start.tv_sec*1000000) + tv_start.tv_usec);
     }
     else
         srand(seed);
@@ -90,11 +107,73 @@ int main(int argc, char *argv[])
     set_req_variables();
 
     /* Calculate usleep overhead */
-    sleep_overhead_us = get_usleep_overhead(10);
+    usleep_overhead_us = get_usleep_overhead(10);
     printf("===============\n");
-    printf("The usleep overhead is %u us.\n", sleep_overhead_us);
+    printf("The usleep overhead is %u us.\n", usleep_overhead_us);
+    printf("===============\n");
 
+    connection_lists = (struct Conn_List*)malloc(num_server * TG_PAIR_CONN * sizeof(struct Conn_List));
+    if (!connection_lists)
+    {
+        cleanup();
+        error("Error: malloc");
+    }
+
+    /* Initialize connection pool and establish connections to servers */
+    for (i = 0; i < num_server; i++)
+    {
+        if (!Init_Conn_List(&connection_lists[i], i, server_addr[i], server_port[i]))
+        {
+            cleanup();
+            error("Error: Init_Conn_List");
+        }
+        if (!Insert_Conn_List(&connection_lists[i], TG_PAIR_CONN))
+        {
+            cleanup();
+            error("Error: Insert_Conn_List");
+        }
+        //Print_Conn_List(&connection_lists[i]);
+    }
+
+    /* Start threads to receive traffic */
+    for (i = 0; i < num_server; i++)
+    {
+        ptr = connection_lists[i].head;
+        while (true)
+        {
+            if (!ptr)
+                break;
+            else
+            {
+                pthread_create(&(ptr->thread), NULL, listen_connection, (void*)ptr);
+                ptr = ptr->next;
+            }
+        }
+    }
+
+    printf("Start to generate requests\n");
+    printf("===============\n");
+    gettimeofday(&tv_start, NULL);
+    run_requests();
+
+    /* Close existing connections */
+    exit_connections();
+    gettimeofday(&tv_end, NULL);
+    printf("Terminate connections\n");
+    printf("===============\n");
+
+    /* Wait for all threads to finish */
+    for (i = 0; i < num_server; i++)
+    {
+        Print_Conn_List(&connection_lists[i]);
+        Wait_Conn_List(&connection_lists[i]);
+    }
+
+    /* Release resources */
     cleanup();
+
+    printf("===============\n");
+    print_statistic();
 
     return 0;
 }
@@ -426,9 +505,168 @@ void set_req_variables()
     printf("The average rate is %lu mbps.\n", rate_total/req_total_num);
 }
 
+/* Receive traffic from established connections */
+void *listen_connection(void *ptr)
+{
+    struct Conn_Node* node = (struct Conn_Node*)ptr;
+    unsigned int meta_data_size = 4 * sizeof(unsigned int);
+    unsigned int flow_id, flow_size, flow_tos, flow_rate;   //flow request meta data
+    char read_buf[TG_MAX_READ] = {'\0'};
+
+    while (true)
+    {
+        if (read_exact(node->sockfd, read_buf, meta_data_size, meta_data_size, false) != meta_data_size)
+        {
+            perror("Error: read meata data");
+            break;
+        }
+
+        /* extract meta data */
+        memcpy(&flow_id, read_buf, sizeof(unsigned int));
+        memcpy(&flow_size, read_buf + sizeof(unsigned int), sizeof(unsigned int));
+        memcpy(&flow_tos, read_buf + 2 * sizeof(unsigned int), sizeof(unsigned int));
+        memcpy(&flow_rate, read_buf + 3 * sizeof(unsigned int), sizeof(unsigned int));
+
+        if (read_exact(node->sockfd, read_buf, flow_size, TG_MAX_READ, true) != flow_size)
+        {
+            perror("Error: receive flow");
+            break;
+        }
+
+        /* Now, this connection can accept new flows */
+        node->busy = false;
+
+        /* A special flow ID to terminate persistent connection */
+        if (flow_id == 0)
+            break;
+        else
+            gettimeofday(&req_stop_time[flow_id - 1], NULL);
+
+        pthread_mutex_lock(&(node->list->lock));
+        node->list->flow_finished++;
+        pthread_mutex_unlock(&(node->list->lock));
+    }
+
+    close(node->sockfd);
+    node->connected = false;
+    node->busy = false;
+
+    return (void*)0;
+}
+
+/* Generate flow requests */
+void run_requests()
+{
+    int i = 0;
+    int sleep_us = 0;
+
+    for (i = 0; i < req_total_num; i++)
+    {
+        sleep_us += req_sleep_us[i];
+        if (sleep_us > usleep_overhead_us)
+        {
+            usleep(sleep_us - usleep_overhead_us);
+            sleep_us = 0;
+        }
+        run_request(i);
+    }
+}
+
+/* Generate a flow request to the server */
+void run_request(unsigned int req_id)
+{
+    int server_id = req_server_id[req_id];
+    int sockfd;
+    unsigned int meta_data_size = 4 * sizeof(unsigned int);
+    char buf[4 * sizeof(unsigned int)] = {'\0'}; // buffer to hold meta data
+    unsigned int flow_id = req_id + 1; //We reserve flow ID 0 for special usage
+    unsigned int flow_size = req_size[req_id];
+    unsigned int flow_tos = req_dscp[req_id] * 4;   //ToS = DSCP * 4
+    unsigned int flow_rate = req_rate[req_id];
+    struct Conn_Node* node = Search_Conn_List(&connection_lists[server_id]);
+
+    /* Cannot find available connection. Need to establish a new connection. */
+    if (!node)
+    {
+        if (Insert_Conn_List(&connection_lists[server_id], 1))
+        {
+            printf("Establish a new connection to %s:%d\n", server_addr[server_id], server_port[server_id]);
+            node = connection_lists[server_id].tail;
+            pthread_create(&(node->thread), NULL, listen_connection, (void*)node);  //start thread on this new connection
+        }
+        else
+        {
+            printf("Cannot establish a new connection to %s:%d\n", server_addr[server_id], server_port[server_id]);
+            return;
+        }
+    }
+
+    /* fill in meta data */
+    memcpy(buf, &flow_id, sizeof(unsigned int));
+    memcpy(buf + sizeof(unsigned int), &flow_size, sizeof(unsigned int));
+    memcpy(buf + 2 * sizeof(unsigned int), &flow_tos, sizeof(unsigned int));
+    memcpy(buf + 3 * sizeof(unsigned int), &flow_rate, sizeof(unsigned int));
+
+    /* Send request and record start time */
+    gettimeofday(&req_start_time[req_id], NULL);
+    sockfd = node->sockfd;
+    node->busy = true;
+    if(write_exact(sockfd, buf, meta_data_size, meta_data_size, 0, flow_tos, 0, false) != meta_data_size)
+        perror("Error: write meta data");
+}
+
+/* Terminate all existing connections */
+void exit_connections()
+{
+    int i = 0;
+    struct Conn_Node* ptr = NULL;
+
+    /* Start threads to receive traffic */
+    for (i = 0; i < num_server; i++)
+    {
+        ptr = connection_lists[i].head;
+        while (true)
+        {
+            if (!ptr)
+                break;
+            else
+            {
+                if (ptr->connected)
+                    exit_connection(ptr);
+                ptr = ptr->next;
+            }
+        }
+    }
+}
+
+/* Terminate a connection */
+void exit_connection(struct Conn_Node* node)
+{
+    int sockfd;
+    unsigned int meta_data_size = 4 * sizeof(unsigned int);
+    char buf[4 * sizeof(unsigned int)] = {'\0'}; // buffer to hold meta data
+    unsigned int flow_id = 0; //A special flow ID to terminate connection
+    unsigned int flow_size = 100;
+    unsigned int flow_tos = 0;
+    unsigned int flow_rate = 0;
+
+    if (!node)
+        return;
+
+    memcpy(buf, &flow_id, sizeof(unsigned int));
+    memcpy(buf + sizeof(unsigned int), &flow_size, sizeof(unsigned int));
+    memcpy(buf + 2 * sizeof(unsigned int), &flow_tos, sizeof(unsigned int));
+    memcpy(buf + 3 * sizeof(unsigned int), &flow_rate, sizeof(unsigned int));
+    sockfd = node->sockfd;
+    if(write_exact(sockfd, buf, meta_data_size, meta_data_size, 0, flow_tos, 0, false) != meta_data_size)
+        perror("Error: write meta data");
+}
+
 /* Clean up resources */
 void cleanup()
 {
+    int i = 0;
+
     free(server_port);
     free(server_addr);
     free(server_req_count);
@@ -449,4 +687,26 @@ void cleanup()
     free(req_sleep_us);
     free(req_start_time);
     free(req_stop_time);
+
+    if (!connection_lists)
+    {
+        for(i = 0; i < num_server; i++)
+            Clear_Conn_List(&connection_lists[i]);
+    }
+    free(connection_lists);
+}
+
+void print_statistic()
+{
+    unsigned long duration_us = (tv_end.tv_sec - tv_start.tv_sec) * 1000000 + (tv_end.tv_usec - tv_start.tv_usec);
+    unsigned long req_size_total = 0;
+    unsigned long goodput_mbps;
+    int i = 0;
+
+    for (i = 0; i < req_total_num; i++)
+        req_size_total += req_size[i];
+
+    goodput_mbps = req_size_total * 8 / duration_us;
+    printf("Achieved goodput is %lu mbps\n", goodput_mbps);
+
 }

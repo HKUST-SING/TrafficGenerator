@@ -12,8 +12,8 @@ directory:
 server: $(SRC_DIR)/server/server.c $(SRC_DIR)/common/common.c
 	$(CC) $(CFLAGS) $(SRC_DIR)/server/server.c $(SRC_DIR)/common/common.c -o $(BIN_DIR)/server
 
-poission-client: $(SRC_DIR)/client/poission-client.c $(SRC_DIR)/common/common.c
-	$(CC) $(CFLAGS) $(SRC_DIR)/client/poission-client.c $(SRC_DIR)/common/common.c  $(SRC_DIR)/common/cdf.c -o $(BIN_DIR)/poission-client
+poission-client: $(SRC_DIR)/client/poission-client.c $(SRC_DIR)/common/common.c $(SRC_DIR)/common/cdf.c $(SRC_DIR)/common/conn.c
+	$(CC) $(CFLAGS) $(SRC_DIR)/client/poission-client.c $(SRC_DIR)/common/common.c  $(SRC_DIR)/common/cdf.c $(SRC_DIR)/common/conn.c -o $(BIN_DIR)/poission-client
 
 simple-client: $(SRC_DIR)/client/simple-client.c $(SRC_DIR)/common/common.c
 	$(CC) $(CFLAGS) $(SRC_DIR)/client/simple-client.c $(SRC_DIR)/common/common.c -o $(BIN_DIR)/simple-client

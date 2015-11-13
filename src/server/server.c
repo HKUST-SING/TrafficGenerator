@@ -169,12 +169,6 @@ void read_args(int argc, char *argv[])
 {
     int i = 1;
 
-    if (argc == 1)
-    {
-        print_usage(argv[0]);
-        exit(EXIT_SUCCESS);
-    }
-
     while (i < argc)
     {
         if (strlen(argv[i]) == 2 && strcmp(argv[i], "-p") == 0)
