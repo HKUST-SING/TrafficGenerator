@@ -45,11 +45,11 @@ def print_fct_results(results):
     # (10MB, infi)
     large=filter(lambda x: x[0]>=10240*1024, results)
 
-    print '%d flows average: %d' % (len(results), average_fct(results))
-    print '%d flows (0, 100KB) average: %d' % (len(small), average_fct(small))
-    print '%d flows (0, 100KB) 99th percentile: %d' % (len(small), tail_fct(small))
-    print '%d flows [100KB, 10MB) average : %d' % (len(medium), average_fct(medium))
-    print '%d flows [10MB, ) average : %d' % (len(large), average_fct(large))
+    print '%d flows overall average: %d us' % (len(results), average_fct(results))
+    print '%d flows (0, 100KB) average: %d us' % (len(small), average_fct(small))
+    print '%d flows (0, 100KB) 99th percentile: %d us' % (len(small), tail_fct(small))
+    print '%d flows [100KB, 10MB) average : %d us' % (len(medium), average_fct(medium))
+    print '%d flows [10MB, ) average : %d us' % (len(large), average_fct(large))
 
 if __name__=='__main__':
     if len(sys.argv)!=2:
