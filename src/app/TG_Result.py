@@ -10,7 +10,7 @@ def fct_result_file(fileName):
         if not line:
             break
         arr=line.split()
-        if len(arr)==3:
+        if len(arr)>=3:
             '''size fct service'''
             results.append([int(arr[0]), int(arr[1]), int(arr[2])])
     f.close()
@@ -39,11 +39,11 @@ def tail_fct(input_tuple_list):
 
 def print_fct_results(results):
      # (0, 100KB)
-    small=filter(lambda x: x[0]<100, results)
+    small=filter(lambda x: x[0]<100*1024, results)
     # (100KB, 10MB)
-    medium=filter(lambda x: 100<=x[0]<10240, results)
+    medium=filter(lambda x: 100*1024<=x[0]<10240*1024, results)
     # (10MB, infi)
-    large=filter(lambda x: x[0]>=10240, results)
+    large=filter(lambda x: x[0]>=10240*1024, results)
 
     print '%d flows average: %d' % (len(results), average_fct(results))
     print '%d flows (0, 100KB) average: %d' % (len(small), average_fct(small))

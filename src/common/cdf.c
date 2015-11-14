@@ -22,8 +22,8 @@ void free_CDF(struct CDF_Table* table)
 /* Get CDF distribution from a given file */
 void load_CDF(struct CDF_Table* table, char *file_name)
 {
-    FILE *fd=NULL;
-    char line[256]={'\0'};
+    FILE *fd = NULL;
+    char line[256] = {'\0'};
     struct CDF_Entry* e = NULL;
     int i = 0;
 

@@ -698,15 +698,27 @@ void cleanup()
 
 void print_statistic()
 {
-    unsigned long duration_us = (tv_end.tv_sec - tv_start.tv_sec) * 1000000 + (tv_end.tv_usec - tv_start.tv_usec);
+    unsigned long duration_us = (tv_end.tv_sec - tv_start.tv_sec) * 1000000 + tv_end.tv_usec - tv_start.tv_usec;
     unsigned long req_size_total = 0;
+    unsigned long fct_us;
     unsigned long goodput_mbps;
     int i = 0;
+    FILE *fd = NULL;
+
+    fd = fopen(fct_log_name, "w");
+    if (!fd)
+        error("Error: fopen");
 
     for (i = 0; i < req_total_num; i++)
+    {
         req_size_total += req_size[i];
+        fct_us = (req_stop_time[i].tv_sec - req_start_time[i].tv_sec) * 1000000 + req_stop_time[i].tv_usec - req_start_time[i].tv_usec;
+        fprintf(fd, "%d %lu %d %d\n", req_size[i], fct_us, req_dscp[i], req_rate[i]);    //size, FCT(us), DSCP, rate(Mbps)
+    }
 
     goodput_mbps = req_size_total * 8 / duration_us;
     printf("Achieved goodput is %lu mbps\n", goodput_mbps);
 
+    fclose(fd);
+    printf("Write FCT results to %s\n", fct_log_name);
 }
