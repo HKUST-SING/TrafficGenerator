@@ -10,7 +10,7 @@ void init_CDF(struct CDF_Table* table)
     table->max_cdf = 1;
 
     if (!table->entries)
-        error("Error: malloc");
+        perror("Error: malloc");
 }
 
 /* Free resources of a CDF distribution */
@@ -29,7 +29,7 @@ void load_CDF(struct CDF_Table* table, char *file_name)
 
     fd = fopen(file_name, "r");
     if (!fd)
-        error("Error: fopen");
+        perror("Error: fopen");
 
     while (fgets(line, sizeof(line), fd) != NULL)
     {
@@ -39,7 +39,7 @@ void load_CDF(struct CDF_Table* table, char *file_name)
             table->max_entry *= 2;
             e = (struct CDF_Entry*)malloc(table->max_entry * sizeof(struct CDF_Entry));
             if (!e)
-                error("Error: malloc");
+                perror("Error: malloc");
             for (i = 0; i < table->num_entry; i++)
                 e[i] = table->entries[i];
             free(table->entries);

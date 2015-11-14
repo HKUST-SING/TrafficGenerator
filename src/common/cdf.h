@@ -4,8 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "common.h"
-
 #define TG_CDF_TABLE_ENTRY 32
 
 struct CDF_Entry

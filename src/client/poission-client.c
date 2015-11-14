@@ -28,6 +28,7 @@ char fct_log_name[80] = "flows.txt";    //default log file name
 int seed = 0; //random seed
 unsigned int usleep_overhead_us = 0; //usleep overhead
 struct timeval tv_start, tv_end; //start and end time of traffic
+int num_new_conn = 0; //new established connections
 
 /* per-server variables */
 int num_server = 0; //total number of servers
@@ -79,10 +80,10 @@ void run_request(unsigned int req_id);
 void exit_connections();
 /* Terminate a connection */
 void exit_connection(struct Conn_Node* node);
+/* Print statistic data */
+void print_statistic();
 /* Clean up resources */
 void cleanup();
-/* Print statistic */
-void print_statistic();
 
 int main(int argc, char *argv[])
 {
@@ -108,9 +109,9 @@ int main(int argc, char *argv[])
 
     /* Calculate usleep overhead */
     usleep_overhead_us = get_usleep_overhead(10);
-    printf("===============\n");
+    printf("===============================\n");
     printf("The usleep overhead is %u us.\n", usleep_overhead_us);
-    printf("===============\n");
+    printf("===============================\n");
 
     connection_lists = (struct Conn_List*)malloc(num_server * TG_PAIR_CONN * sizeof(struct Conn_List));
     if (!connection_lists)
@@ -152,7 +153,7 @@ int main(int argc, char *argv[])
     }
 
     printf("Start to generate requests\n");
-    printf("===============\n");
+    printf("===============================\n");
     gettimeofday(&tv_start, NULL);
     run_requests();
 
@@ -160,7 +161,7 @@ int main(int argc, char *argv[])
     exit_connections();
     gettimeofday(&tv_end, NULL);
     printf("Terminate connections\n");
-    printf("===============\n");
+    printf("===============================\n");
 
     /* Wait for all threads to finish */
     for (i = 0; i < num_server; i++)
@@ -169,12 +170,11 @@ int main(int argc, char *argv[])
         Wait_Conn_List(&connection_lists[i]);
     }
 
-    /* Release resources */
-    cleanup();
-
-    printf("===============\n");
+    printf("===============================\n");
     print_statistic();
 
+    /* Release resources */
+    cleanup();
     return 0;
 }
 
@@ -492,17 +492,17 @@ void set_req_variables()
         rate_total += req_rate[i];
     }
 
-    printf("===============\n");
+    printf("===============================\n");
     printf("We generate %d requests.\n", req_total_num);
 
     for (i = 0; i < num_server; i++)
         printf("%s:%d    %d requests\n", server_addr[i], server_port[i], server_req_count[i]);
 
-    printf("===============\n");
+    printf("===============================\n");
     printf("The average arrival interval is %lu us.\n", req_interval_total/req_total_num);
     printf("The average request size is %lu bytes.\n", req_size_total/req_total_num);
     printf("The average DSCP value is %.2f\n", dscp_total/req_total_num);
-    printf("The average rate is %lu mbps.\n", rate_total/req_total_num);
+    printf("The average flow sending rate is %lu mbps.\n", rate_total/req_total_num);
 }
 
 /* Receive traffic from established connections */
@@ -590,7 +590,7 @@ void run_request(unsigned int req_id)
     {
         if (Insert_Conn_List(&connection_lists[server_id], 1))
         {
-            printf("Establish a new connection to %s:%d\n", server_addr[server_id], server_port[server_id]);
+            printf("[%d] Establish a new connection to %s:%d\n", ++num_new_conn, server_addr[server_id], server_port[server_id]);
             node = connection_lists[server_id].tail;
             pthread_create(&(node->thread), NULL, listen_connection, (void*)node);  //start thread on this new connection
         }
@@ -662,6 +662,32 @@ void exit_connection(struct Conn_Node* node)
         perror("Error: write meta data");
 }
 
+void print_statistic()
+{
+    unsigned long duration_us = (tv_end.tv_sec - tv_start.tv_sec) * 1000000 + tv_end.tv_usec - tv_start.tv_usec;
+    unsigned long req_size_total = 0;
+    unsigned long fct_us;
+    unsigned long goodput_mbps;
+    int i = 0;
+    FILE *fd = NULL;
+
+    fd = fopen(fct_log_name, "w");
+    if (!fd)
+        error("Error: fopen");
+
+    for (i = 0; i < req_total_num; i++)
+    {
+        req_size_total += req_size[i];
+        fct_us = (req_stop_time[i].tv_sec - req_start_time[i].tv_sec) * 1000000 + req_stop_time[i].tv_usec - req_start_time[i].tv_usec;
+        fprintf(fd, "%d %lu %d %d\n", req_size[i], fct_us, req_dscp[i], req_rate[i]);    //size, FCT(us), DSCP, rate(Mbps)
+    }
+
+    fclose(fd);
+    goodput_mbps = req_size_total * 8 / duration_us;
+    printf("Achieved goodput is %lu mbps\n", goodput_mbps);
+    printf("Write FCT results to %s\n", fct_log_name);
+}
+
 /* Clean up resources */
 void cleanup()
 {
@@ -694,31 +720,4 @@ void cleanup()
             Clear_Conn_List(&connection_lists[i]);
     }
     free(connection_lists);
-}
-
-void print_statistic()
-{
-    unsigned long duration_us = (tv_end.tv_sec - tv_start.tv_sec) * 1000000 + tv_end.tv_usec - tv_start.tv_usec;
-    unsigned long req_size_total = 0;
-    unsigned long fct_us;
-    unsigned long goodput_mbps;
-    int i = 0;
-    FILE *fd = NULL;
-
-    fd = fopen(fct_log_name, "w");
-    if (!fd)
-        error("Error: fopen");
-
-    for (i = 0; i < req_total_num; i++)
-    {
-        req_size_total += req_size[i];
-        fct_us = (req_stop_time[i].tv_sec - req_start_time[i].tv_sec) * 1000000 + req_stop_time[i].tv_usec - req_start_time[i].tv_usec;
-        fprintf(fd, "%d %lu %d %d\n", req_size[i], fct_us, req_dscp[i], req_rate[i]);    //size, FCT(us), DSCP, rate(Mbps)
-    }
-
-    goodput_mbps = req_size_total * 8 / duration_us;
-    printf("Achieved goodput is %lu mbps\n", goodput_mbps);
-
-    fclose(fd);
-    printf("Write FCT results to %s\n", fct_log_name);
 }
