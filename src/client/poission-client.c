@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
     printf("The usleep overhead is %u us.\n", usleep_overhead_us);
     printf("===============================\n");
 
-    connection_lists = (struct Conn_List*)malloc(num_server * TG_PAIR_CONN * sizeof(struct Conn_List));
+    connection_lists = (struct Conn_List*)malloc(num_server * sizeof(struct Conn_List));
     if (!connection_lists)
     {
         cleanup();
@@ -128,7 +128,7 @@ int main(int argc, char *argv[])
             cleanup();
             error("Error: Init_Conn_List");
         }
-        if (!Insert_Conn_List(&connection_lists[i], TG_PAIR_CONN))
+        if (!Insert_Conn_List(&connection_lists[i], TG_PAIR_INIT_CONN))
         {
             cleanup();
             error("Error: Insert_Conn_List");
@@ -165,12 +165,8 @@ int main(int argc, char *argv[])
 
     /* Wait for all threads to finish */
     for (i = 0; i < num_server; i++)
-    {
-        Print_Conn_List(&connection_lists[i]);
         Wait_Conn_List(&connection_lists[i]);
-    }
 
-    printf("===============================\n");
     print_statistic();
 
     /* Release resources */
@@ -314,7 +310,7 @@ void read_config(char *file_name)
     /* per-server variables*/
     server_port = (int*)malloc(num_server);
     server_addr = (char (*)[20])malloc(num_server * sizeof(char[20]));
-    server_req_count = (int*)malloc(num_server * sizeof(int));
+    server_req_count = (int*)calloc(num_server, sizeof(int));  //initialize as 0
     /* service DSCP and probability */
     service_dscp = (int*)malloc(max(num_service, 1) * sizeof(int));
     service_prob = (int*)malloc(max(num_service, 1) * sizeof(int));
@@ -468,8 +464,8 @@ void set_req_variables()
     req_dscp = (int*)malloc(req_total_num * sizeof(int));
     req_rate = (int*)malloc(req_total_num * sizeof(int));
     req_sleep_us = (int*)malloc(req_total_num * sizeof(int));
-    req_start_time = (struct timeval*)malloc(req_total_num * sizeof(struct timeval));
-    req_stop_time = (struct timeval*)malloc(req_total_num * sizeof(struct timeval));
+    req_start_time = (struct timeval*)calloc(req_total_num, sizeof(struct timeval));
+    req_stop_time = (struct timeval*)calloc(req_total_num, sizeof(struct timeval));
 
     if (!req_size || !req_server_id || !req_dscp || !req_rate || !req_sleep_us || !req_start_time || !req_stop_time)
     {
@@ -585,7 +581,7 @@ void run_request(unsigned int req_id)
     unsigned int flow_rate = req_rate[req_id];
     struct Conn_Node* node = Search_Conn_List(&connection_lists[server_id]);
 
-    /* Cannot find available connection. Need to establish a new connection. */
+    /* Cannot find available connection. Need to establish new connections. */
     if (!node)
     {
         if (Insert_Conn_List(&connection_lists[server_id], 1))
@@ -596,7 +592,7 @@ void run_request(unsigned int req_id)
         }
         else
         {
-            printf("Cannot establish a new connection to %s:%d\n", server_addr[server_id], server_port[server_id]);
+            printf("Cannot establish new connections to %s:%d\n", server_addr[server_id], server_port[server_id]);
             return;
         }
     }
@@ -680,12 +676,19 @@ void print_statistic()
         req_size_total += req_size[i];
         fct_us = (req_stop_time[i].tv_sec - req_start_time[i].tv_sec) * 1000000 + req_stop_time[i].tv_usec - req_start_time[i].tv_usec;
         fprintf(fd, "%d %lu %d %d\n", req_size[i], fct_us, req_dscp[i], req_rate[i]);    //size, FCT(us), DSCP, rate(Mbps)
+
+        if ((req_stop_time[i].tv_sec == 0) && (req_stop_time[i].tv_usec == 0))
+            printf("Unfinished flow request %d\n", i);
     }
 
     fclose(fd);
     goodput_mbps = req_size_total * 8 / duration_us;
     printf("Achieved goodput is %lu mbps\n", goodput_mbps);
     printf("Write FCT results to %s\n", fct_log_name);
+    printf("===============================\n");
+
+    for (i = 0; i < num_server; i++)
+        Print_Conn_List(&connection_lists[i]);
 }
 
 /* Clean up resources */

@@ -14,8 +14,8 @@
 #define TG_MIN_WRITE 65536   //64KB
 /* Maximum amount of data to read in a 'recv' system call */
 #define TG_MAX_READ 1048576 //1MB
-/* Default number of TCP connections per pair */
-#define TG_PAIR_CONN 5
+/* Default initial number of TCP connections per pair */
+#define TG_PAIR_INIT_CONN 5
 
 
 /* I borrow following three functions from https://github.com/datacenter/empirical-traffic-gen. Thanks Mohammod! */
