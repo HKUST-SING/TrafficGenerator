@@ -371,7 +371,7 @@ void read_config(char *file_name)
 
             init_CDF(req_size_dist);
             load_CDF(req_size_dist, dist_file_name);
-            print_CDF(req_size_dist);
+            //print_CDF(req_size_dist);
             printf("Average request size: %.2f bytes\n", avg_CDF(req_size_dist));
         }
         else if (!strcmp(key, "service"))
@@ -529,18 +529,22 @@ void *listen_connection(void *ptr)
             break;
         }
 
-        /* Now, this connection can accept new flows */
         node->busy = false;
+        pthread_mutex_lock(&(node->list->lock));
+        if (flow_id != 0) //Not the special flow ID
+        {
+            node->list->flow_finished++;
+            node->list->available_len++;
+        }
+        /* Ohterwise, it's a special flow ID to terminate connection.
+           So this connection will no longer be available. */
+        pthread_mutex_unlock(&(node->list->lock));
 
         /* A special flow ID to terminate persistent connection */
         if (flow_id == 0)
             break;
         else
             gettimeofday(&req_stop_time[flow_id - 1], NULL);
-
-        pthread_mutex_lock(&(node->list->lock));
-        node->list->flow_finished++;
-        pthread_mutex_unlock(&(node->list->lock));
     }
 
     close(node->sockfd);
@@ -586,13 +590,13 @@ void run_request(unsigned int req_id)
     {
         if (Insert_Conn_List(&connection_lists[server_id], 1))
         {
-            printf("[%d] Establish a new connection to %s:%d\n", ++num_new_conn, server_addr[server_id], server_port[server_id]);
             node = connection_lists[server_id].tail;
+            printf("[%d] Establish a new connection to %s:%d (available/total = %u/%u)\n", ++num_new_conn, server_addr[server_id], server_port[server_id], node->list->available_len, node->list->len);
             pthread_create(&(node->thread), NULL, listen_connection, (void*)node);  //start thread on this new connection
         }
         else
         {
-            printf("Cannot establish new connections to %s:%d\n", server_addr[server_id], server_port[server_id]);
+            printf("Cannot establish a new connection to %s:%d\n", server_addr[server_id], server_port[server_id]);
             return;
         }
     }
@@ -607,6 +611,10 @@ void run_request(unsigned int req_id)
     gettimeofday(&req_start_time[req_id], NULL);
     sockfd = node->sockfd;
     node->busy = true;
+    pthread_mutex_lock(&(node->list->lock));
+    node->list->available_len--;
+    pthread_mutex_unlock(&(node->list->lock));
+
     if(write_exact(sockfd, buf, meta_data_size, meta_data_size, 0, flow_tos, 0, false) != meta_data_size)
         perror("Error: write meta data");
 }
@@ -654,6 +662,11 @@ void exit_connection(struct Conn_Node* node)
     memcpy(buf + 2 * sizeof(unsigned int), &flow_tos, sizeof(unsigned int));
     memcpy(buf + 3 * sizeof(unsigned int), &flow_rate, sizeof(unsigned int));
     sockfd = node->sockfd;
+
+    pthread_mutex_lock(&(node->list->lock));
+    node->list->available_len--;
+    pthread_mutex_unlock(&(node->list->lock));
+
     if(write_exact(sockfd, buf, meta_data_size, meta_data_size, 0, flow_tos, 0, false) != meta_data_size)
         perror("Error: write meta data");
 }

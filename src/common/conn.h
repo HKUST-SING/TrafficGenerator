@@ -25,7 +25,8 @@ struct Conn_List
     unsigned short port;   //server port number
     struct Conn_Node* head;  //pointer to head node
     struct Conn_Node* tail;  //pointer to tail node
-    unsigned int len;   //current length of this list
+    unsigned int len;   //total number of nodes
+    unsigned int available_len; //total number of available nodes
     unsigned int flow_finished; //the total number of flows finished
     pthread_mutex_t lock;
 };

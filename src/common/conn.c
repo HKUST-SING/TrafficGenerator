@@ -75,6 +75,7 @@ bool Init_Conn_List(struct Conn_List* list, int index, char *ip, unsigned short 
     list->head = NULL;
     list->tail = NULL;
     list->len = 0;
+    list->available_len = 0;
     list->flow_finished = 0;
     pthread_mutex_init(&(list->lock), NULL);
 
@@ -108,6 +109,7 @@ bool Insert_Conn_List(struct Conn_List* list, int num)
             list->tail = new_node;
         }
         list->len++;
+        list->available_len++;
     }
 
     return true;
@@ -118,7 +120,7 @@ struct Conn_Node* Search_Conn_List(struct Conn_List* list)
 {
     struct Conn_Node* ptr = NULL;
 
-    if (!list)
+    if (!list || !(list->available_len))
         return NULL;
 
     ptr = list->head;
@@ -178,5 +180,5 @@ void Clear_Conn_List(struct Conn_List* list)
 void Print_Conn_List(struct Conn_List* list)
 {
     if (list)
-        printf("%s:%hu  connection number: %u  flows finished: %u\n", list->ip, list->port, list->len, list->flow_finished);
+        printf("%s:%hu  total connection number: %u  available connection number: %u  flows finished: %u\n", list->ip, list->port, list->len, list->available_len, list->flow_finished);
 }
