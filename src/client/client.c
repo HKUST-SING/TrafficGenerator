@@ -22,6 +22,8 @@
     #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
+int debug_mode = 0; //debug mode (0 is inactive)
+
 char config_file_name[80] = {'\0'}; //configuration file name
 char dist_file_name[80] = {'\0'};   //size distribution file name
 char fct_log_name[80] = "flows.txt";    //default log file name
@@ -181,6 +183,7 @@ void print_usage(char *program)
     printf("-c <file>    name of configuration file (required)\n");
     printf("-l <file>    name of log file with flow completion times (default %s)\n", fct_log_name);
     printf("-s <seed>    random seed value (default current system time)\n");
+    printf("-d           debug mode (print necessary information)\n");
     printf("-h           display help information\n");
 }
 
@@ -242,6 +245,11 @@ void read_args(int argc, char *argv[])
                 exit(EXIT_FAILURE);
             }
         }
+        else if (strlen(argv[i]) == 2 && strcmp(argv[i], "-d") == 0)
+        {
+            debug_mode = 1;
+            i++;
+        }
         else if (strlen(argv[i]) == 2 && strcmp(argv[i], "-h") == 0)
         {
             print_usage(argv[0]);
@@ -269,7 +277,9 @@ void read_config(char *file_name)
     num_service = 0; //Number of services (optional)
     num_rate = 0; //Number of sending rates (optional)
 
+    printf("===============================\n");
     printf("Reading configuration file %s\n", file_name);
+    printf("===============================\n");
 
     /* Parse configuration file for the first time */
     fd = fopen(file_name, "r");
@@ -344,23 +354,27 @@ void read_config(char *file_name)
         if (!strcmp(key, "server"))
         {
             sscanf(line, "%s %s %d", key, server_addr[num_server], &server_port[num_server]);
-            printf("Server[%d]: %s, Port: %d\n", num_server, server_addr[num_server], server_port[num_server]);
+            if (debug_mode)
+                printf("Server[%d]: %s, Port: %d\n", num_server, server_addr[num_server], server_port[num_server]);
             num_server++;
         }
         else if (!strcmp(key, "load"))
         {
             sscanf(line, "%s %lfMbps", key, &load);
-            printf("Network Load: %.2f Mbps\n", load);
+            if (debug_mode)
+                printf("Network Load: %.2f Mbps\n", load);
         }
         else if (!strcmp(key, "num_reqs"))
         {
             sscanf(line, "%s %d", key, &req_total_num);
-            printf("Number of Requests: %d\n", req_total_num);
+            if (debug_mode)
+                printf("Number of Requests: %d\n", req_total_num);
         }
         else if (!strcmp(key, "req_size_dist"))
         {
             sscanf(line, "%s %s", key, dist_file_name);
-            printf("Loading request size distribution: %s\n", dist_file_name);
+            if (debug_mode)
+                printf("Loading request size distribution: %s\n", dist_file_name);
 
             req_size_dist = (struct CDF_Table*)malloc(sizeof(struct CDF_Table));
             if (!req_size_dist)
@@ -371,8 +385,13 @@ void read_config(char *file_name)
 
             init_CDF(req_size_dist);
             load_CDF(req_size_dist, dist_file_name);
-            //print_CDF(req_size_dist);
-            printf("Average request size: %.2f bytes\n", avg_CDF(req_size_dist));
+            if (debug_mode)
+            {
+                printf("===============================\n");
+                print_CDF(req_size_dist);
+                printf("Average request size: %.2f bytes\n", avg_CDF(req_size_dist));
+                printf("===============================\n");
+            }
         }
         else if (!strcmp(key, "service"))
         {
@@ -388,7 +407,8 @@ void read_config(char *file_name)
                 error("Illegal DSCP probability value");
             }
             service_prob_total += service_prob[num_service];
-            printf("Service DSCP: %d, Prob: %d\n", service_dscp[num_service], service_prob[num_service]);
+            if (debug_mode)
+                printf("Service DSCP: %d, Prob: %d\n", service_dscp[num_service], service_prob[num_service]);
             num_service++;
         }
         else if (!strcmp(key, "rate"))
@@ -405,7 +425,8 @@ void read_config(char *file_name)
                 error("Illegal sending rate probability value");
             }
             rate_prob_total += rate_prob[num_rate];
-            printf("Rate: %dMbps, Prob: %d\n", rate_value[num_rate], rate_prob[num_rate]);
+            if (debug_mode)
+                printf("Rate: %dMbps, Prob: %d\n", rate_value[num_rate], rate_prob[num_rate]);
             num_rate++;
         }
     }
@@ -419,7 +440,8 @@ void read_config(char *file_name)
         service_dscp[0] = 0;
         service_prob[0] = 100;
         service_prob_total = service_prob[0];
-        printf("Service DSCP: %d, Prob: %d\n", service_dscp[0], service_prob[0]);
+        if (debug_mode)
+            printf("Service DSCP: %d, Prob: %d\n", service_dscp[0], service_prob[0]);
     }
 
     /* By default, no rate limiting */
@@ -429,7 +451,8 @@ void read_config(char *file_name)
         rate_value[0] = 0;
         rate_prob[0] = 100;
         rate_prob_total = rate_prob[0];
-        printf("Rate: %dMbps, Prob: %d\n", rate_value[0], rate_prob[0]);
+        if (debug_mode)
+            printf("Rate: %dMbps, Prob: %d\n", rate_value[0], rate_prob[0]);
     }
 
     if (load > 0)
@@ -440,7 +463,6 @@ void read_config(char *file_name)
             cleanup();
             error("Error: period_us is not positive");
         }
-        printf("Average request arrival interval: %d us\n", period_us);
     }
     else
     {
@@ -584,6 +606,8 @@ void run_request(unsigned int req_id)
     unsigned int flow_tos = req_dscp[req_id] * 4;   //ToS = DSCP * 4
     unsigned int flow_rate = req_rate[req_id];
     struct Conn_Node* node = Search_Conn_List(&connection_lists[server_id]);
+    int active_connections = 0;
+    int i = 0;
 
     /* Cannot find available connection. Need to establish new connections. */
     if (!node)
@@ -591,14 +615,24 @@ void run_request(unsigned int req_id)
         if (Insert_Conn_List(&connection_lists[server_id], 1))
         {
             node = connection_lists[server_id].tail;
-            printf("[%d] Establish a new connection to %s:%d (available/total = %u/%u)\n", ++num_new_conn, server_addr[server_id], server_port[server_id], node->list->available_len, node->list->len);
+            if (debug_mode)
+                printf("[%d] Establish a new connection to %s:%d (available/total = %u/%u)\n", ++num_new_conn, server_addr[server_id], server_port[server_id], node->list->available_len, node->list->len);
             pthread_create(&(node->thread), NULL, listen_connection, (void*)node);  //start thread on this new connection
         }
         else
         {
-            printf("Cannot establish a new connection to %s:%d\n", server_addr[server_id], server_port[server_id]);
+            if (debug_mode)
+                printf("Cannot establish a new connection to %s:%d\n", server_addr[server_id], server_port[server_id]);
             return;
         }
+    }
+
+    if (debug_mode && (req_id % 100 == 0))
+    {
+        active_connections = 0;
+        for (i = 0; i< num_server; i++)
+            active_connections += connection_lists[i].len - connection_lists[i].available_len;
+        printf("Concurrent active connections: %d\n", active_connections);
     }
 
     /* fill in meta data */
