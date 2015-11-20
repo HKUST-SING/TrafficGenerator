@@ -318,7 +318,7 @@ void read_config(char *file_name)
 
     /* Initialize configuration */
     /* per-server variables*/
-    server_port = (int*)malloc(num_server);
+    server_port = (int*)malloc(num_server * sizeof(int));
     server_addr = (char (*)[20])malloc(num_server * sizeof(char[20]));
     server_req_count = (int*)calloc(num_server, sizeof(int));  //initialize as 0
     /* service DSCP and probability */
