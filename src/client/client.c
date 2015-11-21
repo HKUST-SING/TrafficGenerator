@@ -764,7 +764,7 @@ void cleanup()
     free(req_start_time);
     free(req_stop_time);
 
-    if (!connection_lists)
+    if (connection_lists)
     {
         for(i = 0; i < num_server; i++)
             Clear_Conn_List(&connection_lists[i]);
