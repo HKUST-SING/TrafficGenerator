@@ -137,6 +137,46 @@ struct Conn_Node* Search_Conn_List(struct Conn_List* list)
     return NULL;
 }
 
+/* Find N available connections in the list */
+struct Conn_Node** Search_N_Conn_List(struct Conn_List* list, unsigned int num)
+{
+    struct Conn_Node* ptr = NULL;
+    struct Conn_Node** result = NULL;
+    int i = 0;
+
+    if (!list || list->available_len < num || !num)
+        return NULL;
+
+    result = (struct Conn_Node**)malloc(num * sizeof(struct Conn_Node*));
+    if (!result)
+    {
+        perror("Error: malloc");
+        return NULL;
+    }
+
+    ptr = list->head;
+    while (true)
+    {
+        if (ptr)
+        {
+            if (!(ptr->busy) && ptr->connected)
+                result[i++] = ptr;
+
+            if (i < num)
+                ptr = ptr->next;
+            else
+                return result;
+        }
+        else
+        {
+            free(result);
+            return NULL;
+        }
+    }
+
+    return NULL;
+}
+
 /* Wait for all threads in the linked list to finish */
 void Wait_Conn_List(struct Conn_List* list)
 {

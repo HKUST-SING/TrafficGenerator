@@ -42,6 +42,9 @@ bool Insert_Conn_List(struct Conn_List* list, int num);
 /* Find the first available connection (busy==false) in the list. */
 struct Conn_Node* Search_Conn_List(struct Conn_List* list);
 
+/* Find N available connections in the list */
+struct Conn_Node** Search_N_Conn_List(struct Conn_List* list, unsigned int num);
+
 /* Wait for all threads in the linked list to finish */
 void Wait_Conn_List(struct Conn_List* list);
 

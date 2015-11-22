@@ -3,20 +3,24 @@
 /* Initialize a CDF distribution */
 void init_CDF(struct CDF_Table* table)
 {
+    if(!table)
+        return;
+
     table->entries = (struct CDF_Entry*)malloc(TG_CDF_TABLE_ENTRY * sizeof(struct CDF_Entry));
     table->num_entry = 0;
     table->max_entry = TG_CDF_TABLE_ENTRY;
     table->min_cdf = 0;
     table->max_cdf = 1;
 
-    if (!table->entries)
+    if (!(table->entries))
         perror("Error: malloc");
 }
 
 /* Free resources of a CDF distribution */
 void free_CDF(struct CDF_Table* table)
 {
-    free(table->entries);
+    if (table)
+        free(table->entries);
 }
 
 /* Get CDF distribution from a given file */
@@ -26,6 +30,9 @@ void load_CDF(struct CDF_Table* table, char *file_name)
     char line[256] = {'\0'};
     struct CDF_Entry* e = NULL;
     int i = 0;
+
+    if (!table)
+        return;
 
     fd = fopen(file_name, "r");
     if (!fd)
@@ -63,6 +70,9 @@ void print_CDF(struct CDF_Table* table)
 {
     int i = 0;
 
+    if (!table)
+        return;
+
     for (i = 0; i < table->num_entry; i++)
         printf("%.2f %.2f\n", table->entries[i].value, table->entries[i].cdf);
 }
@@ -73,6 +83,9 @@ double avg_CDF(struct CDF_Table* table)
     int i = 0;
     double avg = 0;
     double value, prob;
+
+    if (!table)
+        return;
 
     for (i = 0; i < table->num_entry; i++)
     {
@@ -112,6 +125,9 @@ double gen_random_CDF(struct CDF_Table* table)
     int i = 0;
     double x = rand_range(table->min_cdf, table->max_cdf);
     //printf("%f %f %f\n", x, table->min_cdf, table->max_cdf);
+    
+    if (!table)
+        return 0;
 
     for (i = 0; i < table->num_entry; i++)
     {

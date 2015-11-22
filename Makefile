@@ -1,8 +1,9 @@
 CC = gcc
 CFLAGS = -c -Wall -pthread -lm
 LDFLAGS = -pthread -lm
-TARGETS = client simple-client server
+TARGETS = client incast-client simple-client server
 CLIENT_OBJS = common.o cdf.o conn.o client.o
+INCAST_CLIENT_OBJS = common.o cdf.o conn.o incast-client.o
 SIMPLE_CLIENT_OBJS = common.o simple-client.o
 SERVER_OBJS = common.o server.o
 BIN_DIR = bin
@@ -18,6 +19,9 @@ move:
 
 client: $(CLIENT_OBJS)
 	$(CC) $(LDFLAGS) $(CLIENT_OBJS) -o client
+
+incast-client: $(INCAST_CLIENT_OBJS)
+	$(CC) $(LDFLAGS) $(INCAST_CLIENT_OBJS) -o incast-client
 
 simple-client: $(SIMPLE_CLIENT_OBJS)
 	$(CC) $(LDFLAGS) $(SIMPLE_CLIENT_OBJS) -o simple-client
