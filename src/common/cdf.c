@@ -85,7 +85,7 @@ double avg_CDF(struct CDF_Table* table)
     double value, prob;
 
     if (!table)
-        return;
+        return 0;
 
     for (i = 0; i < table->num_entry; i++)
     {
@@ -125,7 +125,7 @@ double gen_random_CDF(struct CDF_Table* table)
     int i = 0;
     double x = rand_range(table->min_cdf, table->max_cdf);
     //printf("%f %f %f\n", x, table->min_cdf, table->max_cdf);
-    
+
     if (!table)
         return 0;
 
