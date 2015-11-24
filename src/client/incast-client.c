@@ -41,7 +41,7 @@ char rct_log_suffix[] = "reqs.txt";
 char rct_log_name[80] = {'\0'}; //request completion times (RCT) log file name
 char fct_log_name[80] = {'\0'};    //request flow completion times (FCT) log file name
 int seed = 0; //random seed
-unsigned int usleep_overhead_us = 0; //usleep overhead
+int usleep_overhead_us = 0; //usleep overhead
 struct timeval tv_start, tv_end; //start and end time of traffic
 
 /* per-server variables */
@@ -88,7 +88,7 @@ struct timeval *flow_start_time = NULL; //start time of flow
 struct timeval *flow_stop_time = NULL;  //stop time of flow
 
 struct Conn_List* connection_lists = NULL; //connection pool
-unsigned int global_flow_id = 0; //flow ID
+int global_flow_id = 0; //flow ID
 
 /* Print usage of the program */
 void print_usage(char *program);
@@ -158,7 +158,7 @@ int main(int argc, char *argv[])
             cleanup();
             error("Error: Init_Conn_List");
         }
-        if (!Insert_Conn_List(&connection_lists[i], max_fanout_size/num_server + TG_PAIR_INIT_CONN))
+        if (!Insert_Conn_List(&connection_lists[i], max(max_fanout_size, TG_PAIR_INIT_CONN)))
         {
             cleanup();
             error("Error: Insert_Conn_List");
@@ -699,17 +699,23 @@ void *listen_connection(void *ptr)
 void run_requests()
 {
     int i = 0;
+    int req_duration_us = 0;
     int sleep_us = 0;
+    struct timeval req_tv_start, req_tv_end;
 
     for (i = 0; i < req_total_num; i++)
     {
-        sleep_us += req_sleep_us[i];
-        if (sleep_us > usleep_overhead_us)
+        gettimeofday(&req_tv_start, NULL);
+        run_request(i);
+        gettimeofday(&req_tv_end, NULL);
+        req_duration_us = (req_tv_end.tv_sec - req_tv_start.tv_sec) * 1000000 + req_tv_end.tv_usec - req_tv_start.tv_usec;
+
+        sleep_us = sleep_us + req_sleep_us[i];
+        if (sleep_us > usleep_overhead_us + req_duration_us)
         {
-            usleep(sleep_us - usleep_overhead_us);
+            usleep(sleep_us - usleep_overhead_us - req_duration_us);
             sleep_us = 0;
         }
-        run_request(i);
     }
 }
 
