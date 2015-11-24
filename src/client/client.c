@@ -724,7 +724,7 @@ void print_statistic()
         fct_us = (req_stop_time[i].tv_sec - req_start_time[i].tv_sec) * 1000000 + req_stop_time[i].tv_usec - req_start_time[i].tv_usec;
         fprintf(fd, "%d %lu %d %d\n", req_size[i], fct_us, req_dscp[i], req_rate[i]);    //size, FCT(us), DSCP, rate(Mbps)
 
-        if ((req_stop_time[i].tv_sec == 0) && (req_start_time[i].tv_usec == 0))
+        if ((req_stop_time[i].tv_sec == 0) && (req_stop_time[i].tv_usec == 0))
             printf("Unfinished flow request %d\n", i);
     }
 
