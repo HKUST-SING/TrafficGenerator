@@ -21,10 +21,10 @@ num_reqs 5000
 rate 0Mbps 10
 rate 500Mbps 30
 rate 800Mbps 60
-service 0 25
-service 1 25
-service 2 25
-service 3 25
+dscp 0 25
+dscp 1 25
+dscp 2 25
+dscp 3 25
 fanout 10 10
 fanout 20 60
 fanout 30 30
