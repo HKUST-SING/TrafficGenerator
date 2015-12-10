@@ -181,6 +181,8 @@ struct Conn_Node** Search_N_Conn_List(struct Conn_List* list, unsigned int num)
 void Wait_Conn_List(struct Conn_List* list)
 {
     struct Conn_Node* ptr = NULL;
+    struct timespec ts;
+    int s;
 
     if (!list)
         return;
@@ -192,7 +194,11 @@ void Wait_Conn_List(struct Conn_List* list)
             break;
         else
         {
-            pthread_join(ptr->thread, NULL);
+            clock_gettime(CLOCK_REALTIME, &ts);
+            ts.tv_sec += 5;
+            s = pthread_timedjoin_np(ptr->thread, NULL, &ts);
+            if (s != 0)
+                perror("Cannot wait for this thread to stop\n");
             ptr = ptr->next;
         }
     }
