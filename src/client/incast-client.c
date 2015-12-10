@@ -56,10 +56,10 @@ int *fanout_prob = NULL;
 int fanout_prob_total = 0;
 int max_fanout_size = 1;
 
-int num_service = 0; //Number of services
-int *service_dscp = NULL;
-int *service_prob = NULL;
-int service_prob_total = 0;
+int num_dscp = 0; //Number of DSCP
+int *dscp_value = NULL;
+int *dscp_prob = NULL;
+int dscp_prob_total = 0;
 
 int num_rate = 0; //Number of sending rates
 int *rate_value = NULL;
@@ -188,17 +188,15 @@ int main(int argc, char *argv[])
     gettimeofday(&tv_start, NULL);
     global_flow_id =  0;
     run_requests();
+    gettimeofday(&tv_end, NULL);
 
     /* Close existing connections */
-    exit_connections();
-    gettimeofday(&tv_end, NULL);
-    printf("Terminate connections\n");
     printf("===============================\n");
+    printf("Exit connections\n");
+    printf("===============================\n");
+    exit_connections();
 
-    /* Wait for all threads to finish */
-    for (i = 0; i < num_server; i++)
-        Wait_Conn_List(&connection_lists[i]);
-
+    printf("===============================\n");
     print_statistic();
 
     /* Release resources */
@@ -309,7 +307,7 @@ void read_config(char *file_name)
     int num_req = 0;    //Number of requests
     int num_dist = 0;   //Number of flow size distributions
     num_fanout = 0; //Number of fanouts (optinal)
-    num_service = 0; //Number of services (optional)
+    num_dscp = 0; //Number of DSCP (optional)
     num_rate = 0; //Number of sending rates (optional)
 
     printf("===============================\n");
@@ -334,8 +332,8 @@ void read_config(char *file_name)
             num_dist++;
         else if (!strcmp(key, "fanout"))
             num_fanout++;
-        else if (!strcmp(key, "service"))
-            num_service++;
+        else if (!strcmp(key, "dscp"))
+            num_dscp++;
         else if (!strcmp(key, "rate"))
             num_rate++;
         else
@@ -361,14 +359,14 @@ void read_config(char *file_name)
     /* fanout size and probability */
     fanout_size = (int*)malloc(max(num_fanout, 1) * sizeof(int));
     fanout_prob = (int*)malloc(max(num_fanout, 1) * sizeof(int));
-    /* service DSCP and probability */
-    service_dscp = (int*)malloc(max(num_service, 1) * sizeof(int));
-    service_prob = (int*)malloc(max(num_service, 1) * sizeof(int));
+    /* DSCP and probability */
+    dscp_value = (int*)malloc(max(num_dscp, 1) * sizeof(int));
+    dscp_prob = (int*)malloc(max(num_dscp, 1) * sizeof(int));
     /* sending rate value and probability */
     rate_value = (int*)malloc(max(num_rate, 1) * sizeof(int));
     rate_prob = (int*)malloc(max(num_rate, 1) * sizeof(int));
 
-    if (!server_port || !server_addr || !server_flow_count || !fanout_size || !fanout_prob || !service_dscp || !service_prob || !rate_value || !rate_prob)
+    if (!server_port || !server_addr || !server_flow_count || !fanout_size || !fanout_prob || !dscp_value || !dscp_prob || !rate_value || !rate_prob)
     {
         cleanup();
         error("Error: malloc");
@@ -377,7 +375,7 @@ void read_config(char *file_name)
     /* Second time */
     num_server = 0;
     num_fanout = 0;
-    num_service = 0;
+    num_dscp = 0;
     num_rate = 0;
 
     fd = fopen(file_name, "r");
@@ -456,23 +454,23 @@ void read_config(char *file_name)
                 printf("Fanout: %d, Prob: %d\n", fanout_size[num_fanout], fanout_prob[num_fanout]);
             num_fanout++;
         }
-        else if (!strcmp(key, "service"))
+        else if (!strcmp(key, "dscp"))
         {
-            sscanf(line, "%s %d %d", key, &service_dscp[num_service], &service_prob[num_service]);
-            if (service_dscp[num_service] < 0 || service_dscp[num_service] >= 64)
+            sscanf(line, "%s %d %d", key, &dscp_value[num_dscp], &dscp_prob[num_dscp]);
+            if (dscp_value[num_dscp] < 0 || dscp_value[num_dscp] >= 64)
             {
                 cleanup();
                 error("Illegal DSCP value");
             }
-            else if (service_prob[num_service] < 0)
+            else if (dscp_prob[num_dscp] < 0)
             {
                 cleanup();
                 error("Illegal DSCP probability value");
             }
-            service_prob_total += service_prob[num_service];
+            dscp_prob_total += dscp_prob[num_dscp];
             if (debug_mode)
-                printf("Service DSCP: %d, Prob: %d\n", service_dscp[num_service], service_prob[num_service]);
-            num_service++;
+                printf("DSCP: %d, Prob: %d\n", dscp_value[num_dscp], dscp_prob[num_dscp]);
+            num_dscp++;
         }
         else if (!strcmp(key, "rate"))
         {
@@ -511,14 +509,14 @@ void read_config(char *file_name)
         printf("Max Fanout: %d\n", max_fanout_size);
 
     /* By default, DSCP value is 0 */
-    if (num_service == 0)
+    if (num_dscp == 0)
     {
-        num_service = 1;
-        service_dscp[0] = 0;
-        service_prob[0] = 100;
-        service_prob_total = service_prob[0];
+        num_dscp = 1;
+        dscp_value[0] = 0;
+        dscp_prob[0] = 100;
+        dscp_prob_total = dscp_prob[0];
         if (debug_mode)
-            printf("Service DSCP: %d, Prob: %d\n", service_dscp[0], service_prob[0]);
+            printf("DSCP: %d, Prob: %d\n", dscp_value[0], dscp_prob[0]);
     }
 
     /* By default, no rate limiting */
@@ -585,7 +583,7 @@ void set_req_variables()
 
         req_size[i] = gen_random_CDF(req_size_dist);    //request size
         req_fanout[i] = gen_value_weight(fanout_size, fanout_prob, num_fanout, fanout_prob_total);  //request fanout
-        req_dscp[i] = gen_value_weight(service_dscp, service_prob, num_service, service_prob_total);    //request DSCP
+        req_dscp[i] = gen_value_weight(dscp_value, dscp_prob, num_dscp, dscp_prob_total);    //request DSCP
         req_rate[i] = gen_value_weight(rate_value, rate_prob, num_rate, rate_prob_total);   //sending rate
         req_sleep_us[i] = poission_gen_interval(1.0/period_us); //sleep interval based on poission process
 
@@ -861,10 +859,12 @@ void exit_connections()
 {
     int i = 0;
     struct Conn_Node* ptr = NULL;
+    int num = 0;
 
     /* Start threads to receive traffic */
     for (i = 0; i < num_server; i++)
     {
+        num = 0;
         ptr = connection_lists[i].head;
         while (true)
         {
@@ -873,10 +873,16 @@ void exit_connections()
             else
             {
                 if (ptr->connected)
+                {
                     exit_connection(ptr);
+                    num++;
+                }
                 ptr = ptr->next;
             }
         }
+        Wait_Conn_List(&connection_lists[i]);
+        if (debug_mode)
+            printf("Exit %d/%u connections to %s:%d\n", num, connection_lists[i].len, server_addr[i], server_port[i]);
     }
 }
 
@@ -961,8 +967,8 @@ void cleanup()
     free(fanout_size);
     free(fanout_prob);
 
-    free(service_dscp);
-    free(service_prob);
+    free(dscp_value);
+    free(dscp_prob);
 
     free(rate_value);
     free(rate_prob);
