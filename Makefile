@@ -1,6 +1,6 @@
 CC = gcc
-CFLAGS = -c -Wall -pthread -lm
-LDFLAGS = -pthread -lm
+CFLAGS = -c -Wall -pthread -lm -lrt
+LDFLAGS = -pthread -lm -lrt
 TARGETS = client incast-client simple-client server
 CLIENT_OBJS = common.o cdf.o conn.o client.o
 INCAST_CLIENT_OBJS = common.o cdf.o conn.o incast-client.o
