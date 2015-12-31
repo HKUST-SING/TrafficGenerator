@@ -16,6 +16,8 @@
 #define TG_MAX_READ 1048576 //1MB
 /* Default initial number of TCP connections per pair */
 #define TG_PAIR_INIT_CONN 5
+/* Default goodput / link capacity ratio */
+#define TG_GOODPUT_RATIO (1448.0 / (1500 + 14 + 4 + 8 + 12))
 
 
 /* I borrow following three functions from https://github.com/datacenter/empirical-traffic-gen. Thanks Mohammod! */

@@ -455,7 +455,7 @@ void read_config(char *file_name)
 
     if (load > 0)
     {
-        period_us = avg_CDF(req_size_dist) * 8 / load;
+        period_us = avg_CDF(req_size_dist) * 8 / load / TG_GOODPUT_RATIO;
         if (period_us <= 0)
         {
             cleanup();
