@@ -19,6 +19,8 @@ unsigned int flow_tos = 0;  //ToS value of flows
 unsigned int flow_number = 10;  //number of flows
 unsigned int flow_rate = 0; //sending rate of flows
 
+bool set_flow_tos = false;
+
 /* Print usage of the program */
 void print_usage(char *program);
 /* Read command line arguments */
@@ -64,6 +66,9 @@ int main(int argc, char *argv[])
     {
         printf("Generate flow request %u\n", i);
 
+        if (!set_flow_tos)
+            flow_tos += 4;
+
         /* fill in meta data */
         memcpy(buf, &i, sizeof(unsigned int));
         memcpy(buf + sizeof(unsigned int), &flow_size, sizeof(unsigned int));
@@ -105,7 +110,7 @@ void print_usage(char *program)
     printf("-s <sender>        IP address of sender (required)\n");
     printf("-p <port>          port number (default %d)\n", TG_SERVER_PORT);
     printf("-n <bytes>         flow size in bytes (default %u)\n", flow_size);
-    printf("-q <tos>           Type of Service (ToS) value (default %u)\n", flow_tos);
+    printf("-q <tos>           Type of Service (ToS) value (default increased from %u)\n", flow_tos);
     printf("-c <count>         number of flows (default %u)\n", flow_number);
     printf("-r <rate (Mbps)>   sending rate of flows (default 0: no rate limiting)\n");
     printf("-h                 display help information\n");
@@ -178,6 +183,7 @@ void read_args(int argc, char *argv[])
         {
             if (i+1 < argc)
             {
+                set_flow_tos = true;
                 sscanf(argv[i+1], "%u", &flow_tos);
                 i += 2;
             }
