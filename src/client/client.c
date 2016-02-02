@@ -27,6 +27,7 @@ int debug_mode = 0; //debug mode (0 is inactive)
 char config_file_name[80] = {'\0'}; //configuration file name
 char dist_file_name[80] = {'\0'};   //size distribution file name
 char fct_log_name[80] = "flows.txt";    //default log file name
+char result_script_name[80] = {'\0'};   //name of script file to parse final results
 int seed = 0; //random seed
 unsigned int usleep_overhead_us = 0; //usleep overhead
 struct timeval tv_start, tv_end; //start and end time of traffic
@@ -171,6 +172,18 @@ int main(int argc, char *argv[])
 
     /* Release resources */
     cleanup();
+
+    /* Parse results */
+    printf("===============================\n");
+    printf("Flow completion times (FCT) results\n");
+    printf("===============================\n");
+    if (strlen(result_script_name) > 0)
+    {
+        char cmd[180] = {'\n'};
+        sprintf(cmd, "python %s %s", result_script_name, fct_log_name);
+        system(cmd);
+    }
+
     return 0;
 }
 
@@ -181,6 +194,7 @@ void print_usage(char *program)
     printf("-c <file>    name of configuration file (required)\n");
     printf("-l <file>    name of log file with flow completion times (default %s)\n", fct_log_name);
     printf("-s <seed>    random seed value (default current system time)\n");
+    printf("-r <file>    name of python script to parse result files\n");
     printf("-d           debug mode (print necessary information)\n");
     printf("-h           display help information\n");
 }
@@ -205,7 +219,6 @@ void read_args(int argc, char *argv[])
                 sprintf(config_file_name, "%s", argv[i+1]);
                 i += 2;
             }
-            /* cannot read IP address */
             else
             {
                 printf("Cannot read configuration file name\n");
@@ -220,7 +233,6 @@ void read_args(int argc, char *argv[])
                 sprintf(fct_log_name, "%s", argv[i+1]);
                 i += 2;
             }
-            /* cannot read IP address */
             else
             {
                 printf("Cannot read log file name\n");
@@ -235,10 +247,23 @@ void read_args(int argc, char *argv[])
                 seed = atoi(argv[i+1]);
                 i += 2;
             }
-            /* cannot read port number */
             else
             {
                 printf("Cannot read seed value\n");
+                print_usage(argv[0]);
+                exit(EXIT_FAILURE);
+            }
+        }
+        else if (strlen(argv[i]) == 2 && strcmp(argv[i], "-r") == 0)
+        {
+            if (i+1 < argc && strlen(argv[i+1]) < sizeof(result_script_name))
+            {
+                sprintf(result_script_name, "%s", argv[i+1]);
+                i += 2;
+            }
+            else
+            {
+                printf("Cannot read script file name\n");
                 print_usage(argv[0]);
                 exit(EXIT_FAILURE);
             }
