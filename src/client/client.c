@@ -179,7 +179,7 @@ int main(int argc, char *argv[])
     printf("===============================\n");
     if (strlen(result_script_name) > 0)
     {
-        char cmd[180] = {'\n'};
+        char cmd[180] = {'\0'};
         sprintf(cmd, "python %s %s", result_script_name, fct_log_name);
         system(cmd);
     }

@@ -40,6 +40,7 @@ char fct_log_suffix[] = "flows.txt";
 char rct_log_suffix[] = "reqs.txt";
 char rct_log_name[80] = {'\0'}; //request completion times (RCT) log file name
 char fct_log_name[80] = {'\0'};    //request flow completion times (FCT) log file name
+char result_script_name[80] = {'\0'};   //name of script file to parse final results
 int seed = 0; //random seed
 int usleep_overhead_us = 0; //usleep overhead
 struct timeval tv_start, tv_end; //start and end time of traffic
@@ -201,6 +202,24 @@ int main(int argc, char *argv[])
 
     /* Release resources */
     cleanup();
+
+    /* Parse results */
+    if (strlen(result_script_name) > 0)
+    {
+        char cmd[180] = {'\0'};
+        printf("===============================\n");
+        printf("Flow completion times (FCT) results\n");
+        printf("===============================\n");
+        sprintf(cmd, "python %s %s", result_script_name, fct_log_name);
+        system(cmd);
+
+        printf("===============================\n");
+        printf("Request completion times (RCT) results\n");
+        printf("===============================\n");
+        sprintf(cmd, "python %s %s\0", result_script_name, rct_log_name);
+        system(cmd);
+    }
+
     return 0;
 }
 
@@ -211,6 +230,7 @@ void print_usage(char *program)
     printf("-c <file>    name of configuration file (required)\n");
     printf("-l <prefix>  log file name prefix (default %s)\n", log_prefix);
     printf("-s <seed>    random seed value (default current system time)\n");
+    printf("-r <file>    name of python script to parse result files\n");
     printf("-d           debug mode (print necessary information)\n");
     printf("-h           display help information\n");
 }
@@ -238,7 +258,6 @@ void read_args(int argc, char *argv[])
                 sprintf(config_file_name, "%s", argv[i+1]);
                 i += 2;
             }
-            /* cannot read IP address */
             else
             {
                 printf("Cannot read configuration file name\n");
@@ -254,7 +273,6 @@ void read_args(int argc, char *argv[])
                 sprintf(rct_log_name, "%s_%s", argv[i+1], rct_log_suffix);
                 i += 2;
             }
-            /* cannot read IP address */
             else
             {
                 printf("Cannot read log file prefix\n");
@@ -269,10 +287,23 @@ void read_args(int argc, char *argv[])
                 seed = atoi(argv[i+1]);
                 i += 2;
             }
-            /* cannot read port number */
             else
             {
                 printf("Cannot read seed value\n");
+                print_usage(argv[0]);
+                exit(EXIT_FAILURE);
+            }
+        }
+        else if (strlen(argv[i]) == 2 && strcmp(argv[i], "-r") == 0)
+        {
+            if (i+1 < argc && strlen(argv[i+1]) < sizeof(result_script_name))
+            {
+                sprintf(result_script_name, "%s", argv[i+1]);
+                i += 2;
+            }
+            else
+            {
+                printf("Cannot read script file name\n");
                 print_usage(argv[0]);
                 exit(EXIT_FAILURE);
             }
