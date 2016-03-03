@@ -4,11 +4,11 @@ A simple traffic generator for network experiments.
 
 The **server** listens for incoming requests, and replies with a *flow* with the requested size (using the requested DSCP value & sending at the requested rate) for each request.
 
-The **client** establishes *persistent TCP connections* to a list of servers and randomly generates requsts over TCP connections acccording to the client configureation file. *If no available TCP connection, the client will establish a new one*. Currently, we provide two types of clients: **client** and **incast-client** for dynamic flow experiments. For **client**, each requess only consists of one flow (fanout = 1). For **incast-client**, each request can consist of several synchronized *incast-like* flows. A request is completed only when all its flows are completed.  
+The **client** establishes *persistent TCP connections* to a list of servers and randomly generates requests over TCP connections according to the client configuration file. *If no available TCP connection, the client will establish a new one*. Currently, we provide two types of clients: **client** and **incast-client** for dynamic flow experiments. For **client**, each request only consists of one flow (fanout = 1). For **incast-client**, each request can consist of several synchronized *incast-like* flows. A request is completed only when all its flows are completed.  
 
-In the **client configuration file**, the user can specify the list of dservers, the Differentiated Services Code Point (DSCP) value distribution, the request fanout distribution, the request size dsitribution, the sending rate distribution, the desired RX throughput and and the total numbers of requests. 
+In the **client configuration file**, the user can specify the list of destination servers, the Differentiated Services Code Point (DSCP) value distribution, the request fanout distribution, the request size distribution, the sending rate distribution, the desired RX throughput and the total numbers of requests. 
 
-##Build
+## Build
 In the main directory, run ```make```, then you will see **client**, **incast-client**, **simple-client** (generate static flows for simple test) and **server** in ./bin.    
 
 ## Quick Start
@@ -69,7 +69,7 @@ Same as **client** except for **-l**
 The prefix is used for the two output files with flow and request completion times.
 
 ## Client Configuration File
-The client configuration file specifies the list of servers, the Differentiated Services Code Point (DSCP) value distribution, the request fanout distribution (only for **incast-client**), the request size dsitribution, the sending rate distribution, the desired load and the total numbers of requests. We provide several client configuration files as examples in ./conf directory.  
+The client configuration file specifies the list of servers, the Differentiated Services Code Point (DSCP) value distribution, the request fanout distribution (only for **incast-client**), the request size distribution, the sending rate distribution, the desired load and the total numbers of requests. We provide several client configuration files as examples in ./conf directory.  
 
 The format is a sequence of key and value(s), one key per line. The permitted keys are:
 
@@ -116,7 +116,7 @@ For each request, the client chooses a rate with a probability proportional to t
 ```
 load 800Mbps
 ```
-The client generates requests to roughly match the desired average throughput. In practice, the actual throughput can be slightly lower than desired (especially for **incast-client** due to connection establishment overhead). The client outputs the actual throughtput upon termination.
+The client generates requests to roughly match the desired average throughput. In practice, the actual throughput can be slightly lower than desired (especially for **incast-client** due to connection establishment overhead). The client outputs the actual throughput upon termination.
 
 * **num_reqs:** the total number of requests.
 ```
