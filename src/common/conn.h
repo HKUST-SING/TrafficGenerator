@@ -2,6 +2,8 @@
 #define CONN_H
 
 #include <stdlib.h>
+
+#define _GNU_SOURCE
 #include <pthread.h>
 #include <stdbool.h>
 
