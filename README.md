@@ -20,12 +20,12 @@ nohup ./bin/server -p 5001 &
 
 - Start client
 ```
-./bin/client-c conf/example_config_1g.txt -l flows.txt -s 123 -r src/script/result.py
+./bin/client -c conf/example_config_1g.txt -l flows.txt -s 123 -r src/script/result.py
 ```
 
 - Start incast-client
 ```
-./bin/client-c conf/incast_example_config_1g.txt -l log -s 123 -r src/script/result.py
+./bin/client -c conf/incast_example_config_1g.txt -l log -s 123 -r src/script/result.py
 ```
 
 ## Command Line Arguments
