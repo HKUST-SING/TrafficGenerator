@@ -43,7 +43,7 @@ Example:
 ### Client
 Example:
 ```
-./bin/client-c conf/example_config_1g.txt -l flows.txt -s 123 -r src/script/result.py
+./bin/client -c conf/example_config_1g.txt -l flows.txt -s 123 -r src/script/result.py
 ```
 * **-c** : name of **configuration** file which specifies workload characteristics (required)
 
@@ -60,7 +60,7 @@ Example:
 ### Incast-Client
 Example:
 ```
-./bin/client-c conf/incast_example_config_1g.txt -l log -s 123 -r src/script/result.py
+./bin/client -c conf/incast_example_config_1g.txt -l log -s 123 -r src/script/result.py
 ```
 
 Same as **client** except for **-l**
@@ -95,7 +95,7 @@ fanout 8 20
 ```
 For each request, the client chooses a fanout with a probability proportional to the weight. For example, with the above configuration, half the requests have fanout 1, and 20% have fanout 8. If the user does not specify the fanout distribution, the fanout size is always 1 for all requests.
 
-* **dscp:** DSCP value and weight. The DSCP value and weight are both integers. No that DSCP value should be smaller than 64.
+* **dscp:** DSCP value and weight. The DSCP value and weight are both integers. Note that DSCP value should be smaller than 64.
 ```
 dscp 0 25
 dscp 1 25
