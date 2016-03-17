@@ -18,16 +18,16 @@ move:
 	mv *.o $(TARGETS) $(BIN_DIR)
 
 client: $(CLIENT_OBJS)
-	$(CC) $(LDFLAGS) $(CLIENT_OBJS) -o client
+	$(CC) $(CLIENT_OBJS) -o client $(LDFLAGS)
 
 incast-client: $(INCAST_CLIENT_OBJS)
-	$(CC) $(LDFLAGS) $(INCAST_CLIENT_OBJS) -o incast-client
+	$(CC) $(INCAST_CLIENT_OBJS) -o incast-client $(LDFLAGS) 
 
 simple-client: $(SIMPLE_CLIENT_OBJS)
-	$(CC) $(LDFLAGS) $(SIMPLE_CLIENT_OBJS) -o simple-client
+	$(CC) $(SIMPLE_CLIENT_OBJS) -o simple-client $(LDFLAGS)
 
 server: $(SERVER_OBJS)
-	$(CC) $(LDFLAGS) $(SERVER_OBJS) -o server
+	$(CC) $(SERVER_OBJS) -o server $(LDFLAGS)
 
 %.o: $(CLIENT_DIR)/%.c
 	$(CC) $(CFLAGS) $^ -o $@
