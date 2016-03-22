@@ -741,7 +741,8 @@ void print_statistic()
     unsigned long duration_us = (tv_end.tv_sec - tv_start.tv_sec) * 1000000 + tv_end.tv_usec - tv_start.tv_usec;
     unsigned long req_size_total = 0;
     unsigned long fct_us;
-    unsigned long goodput_mbps;
+    unsigned long flow_goodput_mbps;    //per-flow goodput (Mbps)
+    unsigned long goodput_mbps; //total goodput (Mbps)
     int i = 0;
     FILE *fd = NULL;
 
@@ -753,7 +754,12 @@ void print_statistic()
     {
         req_size_total += req_size[i];
         fct_us = (req_stop_time[i].tv_sec - req_start_time[i].tv_sec) * 1000000 + req_stop_time[i].tv_usec - req_start_time[i].tv_usec;
-        fprintf(fd, "%d %lu %d %d\n", req_size[i], fct_us, req_dscp[i], req_rate[i]);    //size, FCT(us), DSCP, rate(Mbps)
+        if (fct_us > 0)
+            flow_goodput_mbps = req_size[i] * 8 / fct_us;
+        else
+            flow_goodput_mbps = 0;
+
+        fprintf(fd, "%d %lu %d %d %lu\n", req_size[i], fct_us, req_dscp[i], req_rate[i], flow_goodput_mbps);    //size, FCT(us), DSCP, sending rate (Mbps), goodput (Mbps)
 
         if ((req_stop_time[i].tv_sec == 0) && (req_stop_time[i].tv_usec == 0))
             printf("Unfinished flow request %d\n", i);

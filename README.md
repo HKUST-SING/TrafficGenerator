@@ -124,7 +124,7 @@ num_reqs 1500
 ```
 
 ##Output
-A successful run of **client** creates a file with flow completion time results. A successful run of **incast-client** creates two files with flow completion time results and request completion time results, respectively. In results files, each line gives the request/flow size (in bytes), completion time (in microseconds), DSCP value and sending rate. You can directly use ./src/script/result.py to parse these files.        
+A successful run of **client** creates a file with flow completion time results. A successful run of **incast-client** creates two files with flow completion time results and request completion time results, respectively. In results files, each line gives the request/flow size (in bytes), completion time (in microseconds), DSCP value, desired sending rate (in Mbps) and actuall goodput (in Mbps). You can directly use ./src/script/result.py to parse these files.        
 
 
 
