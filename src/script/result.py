@@ -10,7 +10,7 @@ def fct_result_file(fileName):
         if not line:
             break
         arr = line.split()
-        if len(arr) == 5:
+        if len(arr) >= 5:
             '''size, fct, dscp, sending rate, goodput'''
             results.append([int(arr[0]), int(arr[1])])
     f.close()
@@ -24,7 +24,7 @@ def goodput_result_file(fileName):
         if not line:
             break
         arr = line.split()
-        if len(arr) == 5:
+        if len(arr) >= 5:
             '''size, fct, dscp, sending rate, goodput'''
             results.append([int(arr[0]), int(arr[4])])
     f.close()
