@@ -16,8 +16,6 @@ server 192.168.110.17 5001
 server 192.168.110.18 5001
 server 192.168.110.19 5001
 req_size_dist conf/DCTCP_CDF.txt
-load 9000Mbps
-num_reqs 5000
 rate 0Mbps 10
 rate 500Mbps 30
 rate 800Mbps 60
