@@ -67,9 +67,10 @@ int *rate_value = NULL;
 int *rate_prob = NULL;
 int rate_prob_total = 0;
 
-double load = 0; //Network load (Mbps)
-int req_total_num = 0; //Total number of requests
+double load = -1; //Network load (Mbps)
+int req_total_num = 0; //Total number of requests to generate
 int flow_total_num = 0; //Total number of flows (each request consists of several flows)
+int req_total_time = 0; //Total time to generate requests
 struct CDF_Table* req_size_dist = NULL;
 int period_us;  //Average request arrival interval (us)
 
@@ -140,9 +141,9 @@ int main(int argc, char *argv[])
 
     /* Calculate usleep overhead */
     usleep_overhead_us = get_usleep_overhead(10);
-    printf("===============================\n");
+    printf("===========================================\n");
     printf("The usleep overhead is %u us.\n", usleep_overhead_us);
-    printf("===============================\n");
+    printf("===========================================\n");
 
     connection_lists = (struct Conn_List*)malloc(num_server * sizeof(struct Conn_List));
     if (!connection_lists)
@@ -185,19 +186,22 @@ int main(int argc, char *argv[])
     }
 
     printf("Start to generate requests\n");
-    printf("===============================\n");
+    printf("===========================================\n");
     gettimeofday(&tv_start, NULL);
     global_flow_id =  0;
     run_requests();
     gettimeofday(&tv_end, NULL);
 
     /* Close existing connections */
-    printf("===============================\n");
+    printf("===========================================\n");
     printf("Exit connections\n");
-    printf("===============================\n");
+    printf("===========================================\n");
     exit_connections();
 
-    printf("===============================\n");
+    printf("===========================================\n");
+    for (i = 0; i < num_server; i++)
+        Print_Conn_List(&connection_lists[i]);
+    printf("===========================================\n");
     print_statistic();
 
     /* Release resources */
@@ -207,16 +211,16 @@ int main(int argc, char *argv[])
     if (strlen(result_script_name) > 0)
     {
         char cmd[180] = {'\0'};
-        printf("===============================\n");
+        printf("===========================================\n");
         printf("Flow completion times (FCT) results\n");
-        printf("===============================\n");
+        printf("===========================================\n");
         sprintf(cmd, "python %s %s", result_script_name, fct_log_name);
         system(cmd);
 
         memset (cmd,'\0',180);
-        printf("===============================\n");
+        printf("===========================================\n");
         printf("Request completion times (RCT) results\n");
-        printf("===============================\n");
+        printf("===========================================\n");
         sprintf(cmd, "python %s %s", result_script_name, rct_log_name);
         system(cmd);
     }
@@ -228,18 +232,22 @@ int main(int argc, char *argv[])
 void print_usage(char *program)
 {
     printf("Usage: %s [options]\n", program);
-    printf("-c <file>    name of configuration file (required)\n");
-    printf("-l <prefix>  log file name prefix (default %s)\n", log_prefix);
-    printf("-s <seed>    random seed value (default current system time)\n");
-    printf("-r <file>    name of python script to parse result files\n");
-    printf("-d           debug mode (print necessary information)\n");
-    printf("-h           display help information\n");
+    printf("-b <bandwidth>  expected average RX bandwidth in Mbits/sec\n");
+    printf("-c <file>       configuration file (required)\n");
+    printf("-n <number>     number of requests (instead of -t)\n");
+    printf("-t <time>       time in seconds (instead of -n)\n");
+    printf("-l <prefix>     log file name prefix (default %s)\n", log_prefix);
+    printf("-s <seed>       seed to generate random numbers (default current time)\n");
+    printf("-r <file>       python script to parse result files\n");
+    printf("-d              debug mode (print necessary information)\n");
+    printf("-h              display help information\n");
 }
 
 /* Read command line arguments */
 void read_args(int argc, char *argv[])
 {
     int i = 1;
+    bool error = false;
 
     if (argc == 1)
     {
@@ -252,7 +260,27 @@ void read_args(int argc, char *argv[])
 
     while (i < argc)
     {
-        if (strlen(argv[i]) == 2 && strcmp(argv[i], "-c") == 0)
+        if (strlen(argv[i]) == 2 && strcmp(argv[i], "-b") == 0)
+        {
+            if (i+1 < argc)
+            {
+                load = atof(argv[i+1]);
+                if (load <= 0)
+                {
+                    printf("Invalid average RX bandwidth: %f\n", load);
+                    print_usage(argv[0]);
+                    exit(EXIT_FAILURE);
+                }
+                i += 2;
+            }
+            else
+            {
+                printf("Cannot read average RX bandwidth\n");
+                print_usage(argv[0]);
+                exit(EXIT_FAILURE);
+            }
+        }
+        else if (strlen(argv[i]) == 2 && strcmp(argv[i], "-c") == 0)
         {
             if (i+1 < argc && strlen(argv[i+1]) < sizeof(config_file_name))
             {
@@ -262,6 +290,46 @@ void read_args(int argc, char *argv[])
             else
             {
                 printf("Cannot read configuration file name\n");
+                print_usage(argv[0]);
+                exit(EXIT_FAILURE);
+            }
+        }
+        else if (strlen(argv[i]) == 2 && strcmp(argv[i], "-n") == 0)
+        {
+            if (i+1 < argc)
+            {
+                req_total_num = atoi(argv[i+1]);
+                if (req_total_num <= 0)
+                {
+                    printf("Invalid number of requests: %d\n", req_total_num);
+                    print_usage(argv[0]);
+                    exit(EXIT_FAILURE);
+                }
+                i += 2;
+            }
+            else
+            {
+                printf("Cannot read number of requests\n");
+                print_usage(argv[0]);
+                exit(EXIT_FAILURE);
+            }
+        }
+        else if (strlen(argv[i]) == 2 && strcmp(argv[i], "-t") == 0)
+        {
+            if (i+1 < argc)
+            {
+                req_total_time = atoi(argv[i+1]);
+                if (req_total_time <= 0)
+                {
+                    printf("Invalid time to generate requests: %d\n", req_total_time);
+                    print_usage(argv[0]);
+                    exit(EXIT_FAILURE);
+                }
+                i += 2;
+            }
+            else
+            {
+                printf("Cannot read time to generate requests\n");
                 print_usage(argv[0]);
                 exit(EXIT_FAILURE);
             }
@@ -326,6 +394,29 @@ void read_args(int argc, char *argv[])
             exit(EXIT_FAILURE);
         }
     }
+
+    if (load < 0)
+    {
+        printf("You need to specify the average RX bandwidth (-b)\n");
+        error = true;
+    }
+
+    if (req_total_num == 0 && req_total_time == 0)
+    {
+        printf("You need to specify either the number of requests (-n) or the time to generate requests (-t)\n");
+        error = true;
+    }
+    else if (req_total_num > 0 && req_total_time > 0)
+    {
+        printf("You cannot specify both the number of requests (-n) and the time to generate requests (-t)\n");
+        error = true;
+    }
+
+    if (error)  //Invalid arguments
+    {
+        print_usage(argv[0]);
+        exit(EXIT_FAILURE);
+    }
 }
 
 /* Read configuration file */
@@ -335,16 +426,14 @@ void read_config(char *file_name)
     char line[256] = {'\0'};
     char key[80] = {'\0'};
     num_server = 0;    //Number of senders
-    int num_load = 0;   //Number of network loads
-    int num_req = 0;    //Number of requests
     int num_dist = 0;   //Number of flow size distributions
     num_fanout = 0; //Number of fanouts (optinal)
     num_dscp = 0; //Number of DSCP (optional)
     num_rate = 0; //Number of sending rates (optional)
 
-    printf("===============================\n");
+    printf("===========================================\n");
     printf("Reading configuration file %s\n", file_name);
-    printf("===============================\n");
+    printf("===========================================\n");
 
     /* Parse configuration file for the first time */
     fd = fopen(file_name, "r");
@@ -356,10 +445,6 @@ void read_config(char *file_name)
         sscanf(line, "%s", key);
         if (!strcmp(key, "server"))
             num_server++;
-        else if (!strcmp(key, "load"))
-            num_load++;
-        else if (!strcmp(key, "num_reqs"))
-            num_req++;
         else if (!strcmp(key, "req_size_dist"))
             num_dist++;
         else if (!strcmp(key, "fanout"))
@@ -368,18 +453,12 @@ void read_config(char *file_name)
             num_dscp++;
         else if (!strcmp(key, "rate"))
             num_rate++;
-        else
-            error("Error: invalid key in configuration file");
     }
 
     fclose(fd);
 
     if (num_server < 1)
         error("Error: configuration file should provide at least one server");
-    if (num_load != 1)
-        error("Error: configuration file should provide one network load");
-    if (num_req != 1)
-        error("Error: configuration file should provide one total number of requests");
     if (num_dist != 1)
         error("Error: configuration file should provide one request size distribution");
 
@@ -429,18 +508,6 @@ void read_config(char *file_name)
                 printf("Server[%d]: %s, Port: %d\n", num_server, server_addr[num_server], server_port[num_server]);
             num_server++;
         }
-        else if (!strcmp(key, "load"))
-        {
-            sscanf(line, "%s %lfMbps", key, &load);
-            if (debug_mode)
-                printf("Network Load: %.2f Mbps\n", load);
-        }
-        else if (!strcmp(key, "num_reqs"))
-        {
-            sscanf(line, "%s %d", key, &req_total_num);
-            if (debug_mode)
-                printf("Number of Requests: %d\n", req_total_num);
-        }
         else if (!strcmp(key, "req_size_dist"))
         {
             sscanf(line, "%s %s", key, dist_file_name);
@@ -458,33 +525,11 @@ void read_config(char *file_name)
             load_CDF(req_size_dist, dist_file_name);
             if (debug_mode)
             {
-                printf("===============================\n");
+                printf("===========================================\n");
                 print_CDF(req_size_dist);
                 printf("Average request size: %.2f bytes\n", avg_CDF(req_size_dist));
-                printf("===============================\n");
+                printf("===========================================\n");
             }
-        }
-        else if (!strcmp(key, "fanout"))
-        {
-            sscanf(line, "%s %d %d", key, &fanout_size[num_fanout], &fanout_prob[num_fanout]);
-            if (fanout_size[num_fanout] < 1)
-            {
-                cleanup();
-                error("Illegal fanout size");
-            }
-            else if(fanout_prob[num_fanout] < 0)
-            {
-                cleanup();
-                error("Illegal fanout probability value");
-            }
-
-            fanout_prob_total += fanout_prob[num_fanout];
-            if (fanout_size[num_fanout] > max_fanout_size)
-                max_fanout_size = fanout_size[num_fanout];
-
-            if (debug_mode)
-                printf("Fanout: %d, Prob: %d\n", fanout_size[num_fanout], fanout_prob[num_fanout]);
-            num_fanout++;
         }
         else if (!strcmp(key, "dscp"))
         {
@@ -492,12 +537,12 @@ void read_config(char *file_name)
             if (dscp_value[num_dscp] < 0 || dscp_value[num_dscp] >= 64)
             {
                 cleanup();
-                error("Illegal DSCP value");
+                error("Invalid DSCP value");
             }
             else if (dscp_prob[num_dscp] < 0)
             {
                 cleanup();
-                error("Illegal DSCP probability value");
+                error("Invalid DSCP probability value");
             }
             dscp_prob_total += dscp_prob[num_dscp];
             if (debug_mode)
@@ -510,17 +555,39 @@ void read_config(char *file_name)
             if (rate_value[num_rate] < 0)
             {
                 cleanup();
-                error("Illegal sending rate value");
+                error("Invalid sending rate value");
             }
             else if (rate_prob[num_rate] < 0)
             {
                 cleanup();
-                error("Illegal sending rate probability value");
+                error("Invalid sending rate probability value");
             }
             rate_prob_total += rate_prob[num_rate];
             if (debug_mode)
                 printf("Rate: %dMbps, Prob: %d\n", rate_value[num_rate], rate_prob[num_rate]);
             num_rate++;
+        }
+        else if (!strcmp(key, "fanout"))
+        {
+            sscanf(line, "%s %d %d", key, &fanout_size[num_fanout], &fanout_prob[num_fanout]);
+            if (fanout_size[num_fanout] < 1)
+            {
+                cleanup();
+                error("Invalid fanout size");
+            }
+            else if(fanout_prob[num_fanout] < 0)
+            {
+                cleanup();
+                error("Invalid fanout probability value");
+            }
+
+            fanout_prob_total += fanout_prob[num_fanout];
+            if (fanout_size[num_fanout] > max_fanout_size)
+                max_fanout_size = fanout_size[num_fanout];
+
+            if (debug_mode)
+                printf("Fanout: %d, Prob: %d\n", fanout_size[num_fanout], fanout_prob[num_fanout]);
+            num_fanout++;
         }
     }
 
@@ -561,7 +628,18 @@ void read_config(char *file_name)
         if (debug_mode)
             printf("Rate: %dMbps, Prob: %d\n", rate_value[0], rate_prob[0]);
     }
+}
 
+/* Set request variables */
+void set_req_variables()
+{
+    int i, k, server_id, flow_id = 0;
+    unsigned long req_size_total = 0;
+    double req_dscp_total = 0;
+    unsigned long req_rate_total = 0;
+    unsigned long req_interval_total = 0;
+
+    /* calculate average request arrival interval */
     if (load > 0)
     {
         period_us = avg_CDF(req_size_dist) * 8 / load / TG_GOODPUT_RATIO;
@@ -576,16 +654,10 @@ void read_config(char *file_name)
         cleanup();
         error("Error: load is not positive");
     }
-}
 
-/* Set request variables */
-void set_req_variables()
-{
-    int i, k, server_id, flow_id = 0;
-    unsigned long req_size_total = 0;
-    double req_dscp_total = 0;
-    unsigned long req_rate_total = 0;
-    unsigned long req_interval_total = 0;
+    /* transfer time to the number of requests */
+    if (req_total_num == 0 && req_total_time > 0)
+        req_total_num = max(req_total_time * 1000000 / period_us, 1);
 
     /*per-request variables */
     req_size = (int*)malloc(req_total_num * sizeof(int));
@@ -654,19 +726,20 @@ void set_req_variables()
     if (flow_id != flow_total_num)
         perror("Not all the flows have request ID");
 
-    printf("===============================\n");
-    printf("We generate %d requests (%d flows).\n", req_total_num, flow_total_num);
+    printf("===========================================\n");
+    printf("We generate %d requests (%d flows) in total\n", req_total_num, flow_total_num);
 
     for (i = 0; i < num_server; i++)
         printf("%s:%d    %d flows\n", server_addr[i], server_port[i], server_flow_count[i]);
 
-    printf("===============================\n");
-    printf("The average request arrival interval is %lu us.\n", req_interval_total/req_total_num);
-    printf("The average request size is %lu bytes.\n", req_size_total/req_total_num);
-    printf("The average flow size is %lu bytes.\n", req_size_total/flow_total_num);
-    printf("The average request fanout size is %.2f.\n", (double)flow_total_num/req_total_num);
-    printf("The average request DSCP value is %.2f.\n", req_dscp_total/req_total_num);
-    printf("The average request sending rate is %lu mbps.\n", req_rate_total/req_total_num);
+    printf("===========================================\n");
+    printf("The average request arrival interval is %lu us\n", req_interval_total/req_total_num);
+    printf("The average request size is %lu bytes\n", req_size_total/req_total_num);
+    printf("The average flow size is %lu bytes\n", req_size_total/flow_total_num);
+    printf("The average request fanout size is %.2f\n", (double)flow_total_num/req_total_num);
+    printf("The average request DSCP value is %.2f\n", req_dscp_total/req_total_num);
+    printf("The average request sending rate is %lu Mbps\n", req_rate_total/req_total_num);
+    printf("The expected experiment duration is %lu s\n", req_interval_total/1000000);
 }
 
 /* Receive traffic from established connections */
@@ -989,13 +1062,11 @@ void print_statistic()
     fclose(fd);
 
     goodput_mbps = req_size_total * 8 / duration_us;
-    printf("Achieved goodput is %lu mbps\n", goodput_mbps);
+    printf("The actual RX throughput is %lu Mbps\n", (unsigned long)(goodput_mbps/TG_GOODPUT_RATIO));
+    printf("The actual duration is %lu s\n", duration_us/1000000);
+    printf("===========================================\n");
     printf("Write RCT results to %s\n", rct_log_name);
     printf("Write FCT results to %s\n", fct_log_name);
-    printf("===============================\n");
-
-    for (i = 0; i < num_server; i++)
-        Print_Conn_List(&connection_lists[i]);
 }
 
 /* Clean up resources */
