@@ -617,7 +617,7 @@ void set_req_variables()
     printf("The average request size is %lu bytes\n", req_size_total/req_total_num);
     printf("The average DSCP value is %.2f\n", dscp_total/req_total_num);
     printf("The average flow sending rate is %lu Mbps\n", rate_total/req_total_num);
-    printf("The expected experiment duaration is %lu s\n", req_interval_total/1000000);
+    printf("The expected experiment duration is %lu s\n", req_interval_total/1000000);
 }
 
 /* Receive traffic from established connections */
