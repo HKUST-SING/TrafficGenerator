@@ -82,13 +82,13 @@ if __name__ == '__main__':
     path = sys.argv[1]
     if os.path.isfile(path):
         print_fct_results(fct_result_file(path))
-        print '======================================================'
+        #print '======================================================'
         print_goodput_results(goodput_result_file(path))
     elif os.path.isdir(path):
         if not path.endswith('/'):
             path = path + '/'
         print_fct_results(fct_result_dir(path))
-        print '======================================================'
+        #print '======================================================'
         print_goodput_results(goodput_result_dir(path))
     else:
         print 'Illegal input path'
