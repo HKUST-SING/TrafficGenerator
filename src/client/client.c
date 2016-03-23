@@ -113,9 +113,9 @@ int main(int argc, char *argv[])
 
     /* Calculate usleep overhead */
     usleep_overhead_us = get_usleep_overhead(10);
-    printf("========================================\n");
-    printf("The usleep overhead is %u us.\n", usleep_overhead_us);
-    printf("========================================\n");
+    printf("===========================================\n");
+    printf("The usleep overhead is %u us\n", usleep_overhead_us);
+    printf("===========================================\n");
 
     connection_lists = (struct Conn_List*)malloc(num_server * sizeof(struct Conn_List));
     if (!connection_lists)
@@ -157,27 +157,30 @@ int main(int argc, char *argv[])
     }
 
     printf("Start to generate requests\n");
-    printf("========================================\n");
+    printf("===========================================\n");
     gettimeofday(&tv_start, NULL);
     run_requests();
     gettimeofday(&tv_end, NULL);
 
     /* Close existing connections */
-    printf("========================================\n");
+    printf("===========================================\n");
     printf("Exit connections\n");
-    printf("========================================\n");
+    printf("===========================================\n");
     exit_connections();
 
-    printf("========================================\n");
+    printf("===========================================\n");
+    for (i = 0; i < num_server; i++)
+        Print_Conn_List(&connection_lists[i]);
+    printf("===========================================\n");
     print_statistic();
 
     /* Release resources */
     cleanup();
 
     /* Parse results */
-    printf("========================================\n");
+    printf("===========================================\n");
     printf("Flow completion times (FCT) results\n");
-    printf("========================================\n");
+    printf("===========================================\n");
     if (strlen(result_script_name) > 0)
     {
         char cmd[180] = {'\0'};
@@ -386,9 +389,9 @@ void read_config(char *file_name)
     num_dscp = 0; //Number of DSCP (optional)
     num_rate = 0; //Number of sending rates (optional)
 
-    printf("========================================\n");
+    printf("===========================================\n");
     printf("Reading configuration file %s\n", file_name);
-    printf("========================================\n");
+    printf("===========================================\n");
 
     /* Parse configuration file for the first time */
     fd = fopen(file_name, "r");
@@ -474,10 +477,10 @@ void read_config(char *file_name)
             load_CDF(req_size_dist, dist_file_name);
             if (debug_mode)
             {
-                printf("========================================\n");
+                printf("===========================================\n");
                 print_CDF(req_size_dist);
                 printf("Average request size: %.2f bytes\n", avg_CDF(req_size_dist));
-                printf("========================================\n");
+                printf("===========================================\n");
             }
         }
         else if (!strcmp(key, "dscp"))
@@ -603,18 +606,18 @@ void set_req_variables()
         rate_total += req_rate[i];
     }
 
-    printf("========================================\n");
-    printf("We generate %d requests.\n", req_total_num);
+    printf("===========================================\n");
+    printf("We generate %d requests in total\n", req_total_num);
 
     for (i = 0; i < num_server; i++)
         printf("%s:%d    %d requests\n", server_addr[i], server_port[i], server_req_count[i]);
 
-    printf("========================================\n");
-    printf("The average reuest qarrival interval is %lu us.\n", req_interval_total/req_total_num);
-    printf("The average request size is %lu bytes.\n", req_size_total/req_total_num);
+    printf("===========================================\n");
+    printf("The average reuest qarrival interval is %lu us\n", req_interval_total/req_total_num);
+    printf("The average request size is %lu bytes\n", req_size_total/req_total_num);
     printf("The average DSCP value is %.2f\n", dscp_total/req_total_num);
-    printf("The average flow sending rate is %lu mbps.\n", rate_total/req_total_num);
-    printf("The expected duaration is %lu s.\n", req_interval_total/1000000);
+    printf("The average flow sending rate is %lu Mbps\n", rate_total/req_total_num);
+    printf("The expected experiment duaration is %lu s\n", req_interval_total/1000000);
 }
 
 /* Receive traffic from established connections */
@@ -838,14 +841,10 @@ void print_statistic()
 
     fclose(fd);
     goodput_mbps = req_size_total * 8 / duration_us;
-    printf("The actual RX throughput is %lu mbps\n", (unsigned long)(goodput_mbps/TG_GOODPUT_RATIO));
+    printf("The actual RX throughput is %lu Mbps\n", (unsigned long)(goodput_mbps/TG_GOODPUT_RATIO));
     printf("The actual duration is %lu s\n", duration_us/1000000);
-    printf("========================================\n");
+    printf("===========================================\n");
     printf("Write FCT results to %s\n", fct_log_name);
-    printf("========================================\n");
-
-    for (i = 0; i < num_server; i++)
-        Print_Conn_List(&connection_lists[i]);
 }
 
 /* Clean up resources */
