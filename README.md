@@ -6,7 +6,7 @@ The **server** listens for incoming requests, and replies with a *flow* with the
 
 The **client** establishes *persistent TCP connections* to a list of servers and randomly generates requests over TCP connections according to the client configuration file. *If no available TCP connection, the client will establish a new one*. Currently, we provide two types of clients: **client** and **incast-client** for dynamic flow experiments. For **client**, each request only consists of one flow (fanout = 1). For **incast-client**, each request can consist of several synchronized *incast-like* flows. A request is completed only when all its flows are completed.  
 
-In the **client configuration file**, the user can specify the list of destination servers, the Differentiated Services Code Point (DSCP) value distribution, the request fanout distribution, the request size distribution, the sending rate distribution, the desired RX throughput and the total numbers of requests. 
+In the **client configuration file**, the user can specify the list of destination servers, the request size distribution, the Differentiated Services Code Point (DSCP) value distribution, the sending rate distribution and the request fanout distribution, . 
 
 ## Build
 In the main directory, run ```make```, then you will see **client**, **incast-client**, **simple-client** (generate static flows for simple test) and **server** in ./bin.    
@@ -20,12 +20,12 @@ nohup ./bin/server -p 5001 &
 
 - Start client
 ```
-./bin/client -c conf/example_config_1g.txt -l flows.txt -s 123 -r src/script/result.py
+./bin/client -b 900 -c conf/client_config.txt -n 5000 -l flows.txt -s 123 -r src/script/result.py
 ```
 
 - Start incast-client
 ```
-./bin/client -c conf/incast_example_config_1g.txt -l log -s 123 -r src/script/result.py
+./bin/incast-client -b 900 -c conf/incast_client_config.txt -n 5000 -l log -s 123 -r src/script/result.py
 ```
 
 ## Command Line Arguments
@@ -43,24 +43,32 @@ Example:
 ### Client
 Example:
 ```
-./bin/client -c conf/example_config_1g.txt -l flows.txt -s 123 -r src/script/result.py
+./bin/client -b 900 -c conf/client_config.txt -n 5000 -l flows.txt -s 123 -r src/script/result.py
 ```
-* **-c** : name of **configuration** file which specifies workload characteristics (required)
+* **-b** : expected average RX **bandwidth** in Mbits/sec
+ 
+* **-c** : **configuration** file which specifies workload characteristics (required)
 
-* **-l** : name of **log** file with flow completion times (default flows.txt)
+* **-n** : **number** of requests (instead of -t)
 
-* **-s** : seed value for random number generation (default current system time)
+* **-t** : **time** in seconds to generate requests (instead of -n)
+ 
+* **-l** : **log** file with flow completion times (default flows.txt)
 
-* **-r** : name of python script to parse **result** files
+* **-s** : **seed** to generate random numbers (default current system time)
+
+* **-r** : python script to parse **result** files
 
 * **-d** : **debug** mode (print necessary information)
 
-* **-h** : display help information
+* **-h** : display **help** information
+
+Note that you need to specify either the number of requests (-n) or the time to generate requests (-t). But you cannot specify both of them.
 
 ### Incast-Client
 Example:
 ```
-./bin/client -c conf/incast_example_config_1g.txt -l log -s 123 -r src/script/result.py
+./bin/incast-client -c conf/incast_client_config.txt -l log -s 123 -r src/script/result.py
 ```
 
 Same as **client** except for **-l**
@@ -69,7 +77,7 @@ Same as **client** except for **-l**
 The prefix is used for the two output files with flow and request completion times.
 
 ## Client Configuration File
-The client configuration file specifies the list of servers, the Differentiated Services Code Point (DSCP) value distribution, the request fanout distribution (only for **incast-client**), the request size distribution, the sending rate distribution, the desired load and the total numbers of requests. We provide several client configuration files as examples in ./conf directory.  
+The client configuration file specifies the list of servers, the request size distribution, the Differentiated Services Code Point (DSCP) value distribution, the sending rate distribution and the request fanout distribution (only for **incast-client**). We provide several client configuration files as examples in ./conf directory.  
 
 The format is a sequence of key and value(s), one key per line. The permitted keys are:
 
@@ -85,15 +93,6 @@ req_size_dist conf/DCTCP_CDF.txt
 There must be one request size distribution file, present at the given path, 
 which specifies the CDF of the request size distribution. See "DCTCP_CDF.txt" in ./conf directory 
 for an example with proper formatting.
-
-* **fanout:** fanout value and weight. Note that only **incast-client** need this key. The fanout and weight are both 
-integers.
-```
-fanout 1 50
-fanout 2 30
-fanout 8 20
-```
-For each request, the client chooses a fanout with a probability proportional to the weight. For example, with the above configuration, half the requests have fanout 1, and 20% have fanout 8. If the user does not specify the fanout distribution, the fanout size is always 1 for all requests.
 
 * **dscp:** DSCP value and weight. The DSCP value and weight are both integers. Note that DSCP value should be smaller than 64.
 ```
@@ -112,19 +111,24 @@ rate 800Mbps 60
 ```
 For each request, the client chooses a rate with a probability proportional to the weight. To enforce the sending rate, the sender will add some delay on the application layer. Note that 0Mbps rate value indeed indicates no rate limiting. If the user does not specify the sending rate distribution, the sender will not rate-limit traffic.
 
-* **load:** average RX throughput at the client in Mbps.
+* **fanout:** fanout value and weight. Note that only **incast-client** need this key. The fanout and weight are both 
+integers.
 ```
-load 800Mbps
+fanout 1 50
+fanout 2 30
+fanout 8 20
 ```
-The client generates requests to roughly match the desired average throughput. In practice, the actual throughput can be slightly lower than desired (especially for **incast-client** due to connection establishment overhead). The client outputs the actual throughput upon termination.
-
-* **num_reqs:** the total number of requests.
-```
-num_reqs 1500
-```
+For each request, the client chooses a fanout with a probability proportional to the weight. For example, with the above configuration, half the requests have fanout 1, and 20% have fanout 8. If the user does not specify the fanout distribution, the fanout size is always 1 for all requests.
 
 ##Output
-A successful run of **client** creates a file with flow completion time results. A successful run of **incast-client** creates two files with flow completion time results and request completion time results, respectively. In results files, each line gives the request/flow size (in bytes), completion time (in microseconds), DSCP value, desired sending rate (in Mbps) and actuall goodput (in Mbps). You can directly use ./src/script/result.py to parse these files.        
+A successful run of **client** creates a file with flow completion time results. A successful run of **incast-client** creates two files with flow completion time results and request completion time results, respectively. You can directly use ./src/script/result.py to parse these files. 
+
+In files with flow completion times, each line gives flow size (in bytes), flow completion time (in microseconds), DSCP value, desired sending rate (in Mbps) and actual per-flow goodput (in Mbps). 
+
+In files with request completion times, each line gives request size (in bytes), request completion time (in microseconds), DSCP value, desired sending rate (in Mbps), actual per-request goodput (in Mbps) and request fanout size.  
+
+##Miscellaneous
+If you use the traffic generator in your research work, please acknowledge the source and cite [MQ-ECN](https://www.usenix.org/conference/nsdi16/technical-sessions/presentation/bai) paper (the traffic generator was initially developed as part of MQ-ECN project). For questions, please contact [Wei Bai](http://sing.cse.ust.hk/~wei/).
 
 
 
