@@ -120,11 +120,12 @@ int main(int argc, char *argv[])
         printf("===========================================\n");
     }
 
-    connection_lists = (struct Conn_List*)malloc(num_server * sizeof(struct Conn_List));
+    /* We use calloc here to implicitly initialize struct Conn_List as 0 */
+    connection_lists = (struct Conn_List*)calloc(num_server, sizeof(struct Conn_List));
     if (!connection_lists)
     {
         cleanup();
-        error("Error: malloc");
+        error("Error: calloc");
     }
 
     /* Initialize connection pool and establish connections to servers */
@@ -161,6 +162,7 @@ int main(int argc, char *argv[])
         }
     }
 
+    printf("===========================================\n");
     printf("Start to generate requests\n");
     printf("===========================================\n");
     gettimeofday(&tv_start, NULL);
@@ -425,20 +427,20 @@ void read_config(char *file_name)
 
     /* Initialize configuration */
     /* per-server variables*/
-    server_port = (int*)malloc(num_server * sizeof(int));
-    server_addr = (char (*)[20])malloc(num_server * sizeof(char[20]));
+    server_port = (int*)calloc(num_server, sizeof(int));
+    server_addr = (char (*)[20])calloc(num_server, sizeof(char[20]));
     server_req_count = (int*)calloc(num_server, sizeof(int));  //initialize as 0
     /* DSCP and probability */
-    dscp_value = (int*)malloc(max(num_dscp, 1) * sizeof(int));
-    dscp_prob = (int*)malloc(max(num_dscp, 1) * sizeof(int));
+    dscp_value = (int*)calloc(max(num_dscp, 1), sizeof(int));
+    dscp_prob = (int*)calloc(max(num_dscp, 1), sizeof(int));
     /* sending rate value and probability */
-    rate_value = (int*)malloc(max(num_rate, 1) * sizeof(int));
-    rate_prob = (int*)malloc(max(num_rate, 1) * sizeof(int));
+    rate_value = (int*)calloc(max(num_rate, 1), sizeof(int));
+    rate_prob = (int*)calloc(max(num_rate, 1), sizeof(int));
 
     if (!server_port || !server_addr || !server_req_count || !dscp_value || !dscp_prob || !rate_value || !rate_prob)
     {
         cleanup();
-        error("Error: malloc");
+        error("Error: calloc");
     }
 
     /* Second time */
@@ -582,18 +584,18 @@ void set_req_variables()
         req_total_num = max(req_total_time * 1000000 / period_us, 1);
 
     /* request variables */
-    req_size = (int*)malloc(req_total_num * sizeof(int));
-    req_server_id = (int*)malloc(req_total_num * sizeof(int));
-    req_dscp = (int*)malloc(req_total_num * sizeof(int));
-    req_rate = (int*)malloc(req_total_num * sizeof(int));
-    req_sleep_us = (int*)malloc(req_total_num * sizeof(int));
+    req_size = (int*)calloc(req_total_num, sizeof(int));
+    req_server_id = (int*)calloc(req_total_num, sizeof(int));
+    req_dscp = (int*)calloc(req_total_num, sizeof(int));
+    req_rate = (int*)calloc(req_total_num, sizeof(int));
+    req_sleep_us = (int*)calloc(req_total_num, sizeof(int));
     req_start_time = (struct timeval*)calloc(req_total_num, sizeof(struct timeval));
     req_stop_time = (struct timeval*)calloc(req_total_num, sizeof(struct timeval));
 
     if (!req_size || !req_server_id || !req_dscp || !req_rate || !req_sleep_us || !req_start_time || !req_stop_time)
     {
         cleanup();
-        error("Error: malloc per-request variables");
+        error("Error: calloc per-request variables");
     }
 
     for (i = 0; i < req_total_num; i++)
