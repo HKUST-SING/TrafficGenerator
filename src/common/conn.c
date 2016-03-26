@@ -95,7 +95,10 @@ bool Insert_Conn_List(struct Conn_List* list, int num)
     {
         new_node = (struct Conn_Node*)malloc(sizeof(struct Conn_Node));
         if (!Init_Conn_Node(new_node, list->len, list))
+        {
+            free(new_node);
             return false;
+        }
 
         /* If the list is empty */
         if (list->len == 0)
@@ -108,8 +111,10 @@ bool Insert_Conn_List(struct Conn_List* list, int num)
             list->tail->next = new_node;
             list->tail = new_node;
         }
+        pthread_mutex_lock(&(list->lock));
         list->len++;
         list->available_len++;
+        pthread_mutex_unlock(&(list->lock));
     }
 
     return true;
