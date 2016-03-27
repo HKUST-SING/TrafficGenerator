@@ -135,7 +135,7 @@ void read_args(int argc, char *argv[])
                 if (strlen(argv[i+1]) <= 15)
                     strncpy(servIP, argv[i+1], strlen(argv[i+1]));
                 else
-                    error("Illegal IP address\n");
+                    error("Invalid IP address\n");
                 //printf("Server IP address %s\n", servIP);
                 i += 2;
             }
@@ -153,7 +153,7 @@ void read_args(int argc, char *argv[])
             {
                 servPort = atoi(argv[i+1]);
                 if (servPort < 0 || servPort > 65535)
-                    error("Illegal port number");
+                    error("Invalid port number");
                 i += 2;
             }
             /* cannot read port number */

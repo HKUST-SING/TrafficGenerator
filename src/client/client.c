@@ -22,7 +22,7 @@
     #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
-int debug_mode = 0; //debug mode (0 is inactive)
+bool verbose_mode = false; //by default, we don't give more detailed output
 
 char config_file_name[80] = {'\0'}; //configuration file name
 char dist_file_name[80] = {'\0'};   //size distribution file name
@@ -112,26 +112,32 @@ int main(int argc, char *argv[])
     set_req_variables();
 
     /* Calculate usleep overhead */
-    usleep_overhead_us = get_usleep_overhead(10);
-    printf("===========================================\n");
-    printf("The usleep overhead is %u us\n", usleep_overhead_us);
-    printf("===========================================\n");
+    usleep_overhead_us = get_usleep_overhead(20);
+    if (verbose_mode)
+    {
+        printf("===========================================\n");
+        printf("The usleep overhead is %u us\n", usleep_overhead_us);
+        printf("===========================================\n");
+    }
 
-    connection_lists = (struct Conn_List*)malloc(num_server * sizeof(struct Conn_List));
+    /* We use calloc here to implicitly initialize struct Conn_List as 0 */
+    connection_lists = (struct Conn_List*)calloc(num_server, sizeof(struct Conn_List));
     if (!connection_lists)
     {
         cleanup();
-        error("Error: malloc");
+        error("Error: calloc");
     }
 
     /* Initialize connection pool and establish connections to servers */
     for (i = 0; i < num_server; i++)
     {
+        /* Initialize server IP and port information */
         if (!Init_Conn_List(&connection_lists[i], i, server_addr[i], server_port[i]))
         {
             cleanup();
             error("Error: Init_Conn_List");
         }
+        /* Establish TG_PAIR_INIT_CONN connections to server_addr[i]:server_port[i] */
         if (!Insert_Conn_List(&connection_lists[i], TG_PAIR_INIT_CONN))
         {
             cleanup();
@@ -156,6 +162,7 @@ int main(int argc, char *argv[])
         }
     }
 
+    printf("===========================================\n");
     printf("Start to generate requests\n");
     printf("===========================================\n");
     gettimeofday(&tv_start, NULL);
@@ -202,7 +209,7 @@ void print_usage(char *program)
     printf("-l <file>       log file with flow completion times (default %s)\n", fct_log_name);
     printf("-s <seed>       seed to generate random numbers (default current time)\n");
     printf("-r <file>       python script to parse result files\n");
-    printf("-d              debug mode (print necessary information)\n");
+    printf("-v              give more detailed output (verbose)\n");
     printf("-h              display help information\n");
 }
 
@@ -336,9 +343,9 @@ void read_args(int argc, char *argv[])
                 exit(EXIT_FAILURE);
             }
         }
-        else if (strlen(argv[i]) == 2 && strcmp(argv[i], "-d") == 0)
+        else if (strlen(argv[i]) == 2 && strcmp(argv[i], "-v") == 0)
         {
-            debug_mode = 1;
+            verbose_mode = true;
             i++;
         }
         else if (strlen(argv[i]) == 2 && strcmp(argv[i], "-h") == 0)
@@ -420,20 +427,20 @@ void read_config(char *file_name)
 
     /* Initialize configuration */
     /* per-server variables*/
-    server_port = (int*)malloc(num_server * sizeof(int));
-    server_addr = (char (*)[20])malloc(num_server * sizeof(char[20]));
+    server_port = (int*)calloc(num_server, sizeof(int));
+    server_addr = (char (*)[20])calloc(num_server, sizeof(char[20]));
     server_req_count = (int*)calloc(num_server, sizeof(int));  //initialize as 0
     /* DSCP and probability */
-    dscp_value = (int*)malloc(max(num_dscp, 1) * sizeof(int));
-    dscp_prob = (int*)malloc(max(num_dscp, 1) * sizeof(int));
+    dscp_value = (int*)calloc(max(num_dscp, 1), sizeof(int));
+    dscp_prob = (int*)calloc(max(num_dscp, 1), sizeof(int));
     /* sending rate value and probability */
-    rate_value = (int*)malloc(max(num_rate, 1) * sizeof(int));
-    rate_prob = (int*)malloc(max(num_rate, 1) * sizeof(int));
+    rate_value = (int*)calloc(max(num_rate, 1), sizeof(int));
+    rate_prob = (int*)calloc(max(num_rate, 1), sizeof(int));
 
     if (!server_port || !server_addr || !server_req_count || !dscp_value || !dscp_prob || !rate_value || !rate_prob)
     {
         cleanup();
-        error("Error: malloc");
+        error("Error: calloc");
     }
 
     /* Second time */
@@ -456,14 +463,14 @@ void read_config(char *file_name)
         if (!strcmp(key, "server"))
         {
             sscanf(line, "%s %s %d", key, server_addr[num_server], &server_port[num_server]);
-            if (debug_mode)
+            if (verbose_mode)
                 printf("Server[%d]: %s, Port: %d\n", num_server, server_addr[num_server], server_port[num_server]);
             num_server++;
         }
         else if (!strcmp(key, "req_size_dist"))
         {
             sscanf(line, "%s %s", key, dist_file_name);
-            if (debug_mode)
+            if (verbose_mode)
                 printf("Loading request size distribution: %s\n", dist_file_name);
 
             req_size_dist = (struct CDF_Table*)malloc(sizeof(struct CDF_Table));
@@ -475,7 +482,7 @@ void read_config(char *file_name)
 
             init_CDF(req_size_dist);
             load_CDF(req_size_dist, dist_file_name);
-            if (debug_mode)
+            if (verbose_mode)
             {
                 printf("===========================================\n");
                 print_CDF(req_size_dist);
@@ -497,7 +504,7 @@ void read_config(char *file_name)
                 error("Invalid DSCP probability value");
             }
             dscp_prob_total += dscp_prob[num_dscp];
-            if (debug_mode)
+            if (verbose_mode)
                 printf("DSCP: %d, Prob: %d\n", dscp_value[num_dscp], dscp_prob[num_dscp]);
             num_dscp++;
         }
@@ -515,7 +522,7 @@ void read_config(char *file_name)
                 error("Invalid sending rate probability value");
             }
             rate_prob_total += rate_prob[num_rate];
-            if (debug_mode)
+            if (verbose_mode)
                 printf("Rate: %dMbps, Prob: %d\n", rate_value[num_rate], rate_prob[num_rate]);
             num_rate++;
         }
@@ -530,7 +537,7 @@ void read_config(char *file_name)
         dscp_value[0] = 0;
         dscp_prob[0] = 100;
         dscp_prob_total = dscp_prob[0];
-        if (debug_mode)
+        if (verbose_mode)
             printf("DSCP: %d, Prob: %d\n", dscp_value[0], dscp_prob[0]);
     }
 
@@ -541,7 +548,7 @@ void read_config(char *file_name)
         rate_value[0] = 0;
         rate_prob[0] = 100;
         rate_prob_total = rate_prob[0];
-        if (debug_mode)
+        if (verbose_mode)
             printf("Rate: %dMbps, Prob: %d\n", rate_value[0], rate_prob[0]);
     }
 
@@ -577,18 +584,18 @@ void set_req_variables()
         req_total_num = max(req_total_time * 1000000 / period_us, 1);
 
     /* request variables */
-    req_size = (int*)malloc(req_total_num * sizeof(int));
-    req_server_id = (int*)malloc(req_total_num * sizeof(int));
-    req_dscp = (int*)malloc(req_total_num * sizeof(int));
-    req_rate = (int*)malloc(req_total_num * sizeof(int));
-    req_sleep_us = (int*)malloc(req_total_num * sizeof(int));
+    req_size = (int*)calloc(req_total_num, sizeof(int));
+    req_server_id = (int*)calloc(req_total_num, sizeof(int));
+    req_dscp = (int*)calloc(req_total_num, sizeof(int));
+    req_rate = (int*)calloc(req_total_num, sizeof(int));
+    req_sleep_us = (int*)calloc(req_total_num, sizeof(int));
     req_start_time = (struct timeval*)calloc(req_total_num, sizeof(struct timeval));
     req_stop_time = (struct timeval*)calloc(req_total_num, sizeof(struct timeval));
 
     if (!req_size || !req_server_id || !req_dscp || !req_rate || !req_sleep_us || !req_start_time || !req_stop_time)
     {
         cleanup();
-        error("Error: malloc per-request variables");
+        error("Error: calloc per-request variables");
     }
 
     for (i = 0; i < req_total_num; i++)
@@ -712,19 +719,19 @@ void run_request(unsigned int req_id)
         if (Insert_Conn_List(&connection_lists[server_id], 1))
         {
             node = connection_lists[server_id].tail;
-            if (debug_mode)
+            if (verbose_mode)
                 printf("[%d] Establish a new connection to %s:%d (available/total = %u/%u)\n", ++num_new_conn, server_addr[server_id], server_port[server_id], node->list->available_len, node->list->len);
             pthread_create(&(node->thread), NULL, listen_connection, (void*)node);  //start thread on this new connection
         }
         else
         {
-            if (debug_mode)
+            if (verbose_mode)
                 printf("Cannot establish a new connection to %s:%d\n", server_addr[server_id], server_port[server_id]);
             return;
         }
     }
 
-    if (debug_mode && (req_id % 100 == 0))
+    if (verbose_mode && (req_id % 100 == 0))
     {
         active_connections = 0;
         for (i = 0; i< num_server; i++)
@@ -777,7 +784,7 @@ void exit_connections()
             }
         }
         Wait_Conn_List(&connection_lists[i]);
-        if (debug_mode)
+        if (verbose_mode)
             printf("Exit %d/%u connections to %s:%d\n", num, connection_lists[i].len, server_addr[i], server_port[i]);
     }
 }
@@ -875,8 +882,15 @@ void cleanup()
 
     if (connection_lists)
     {
+        if (verbose_mode)
+            printf("===========================================\n");
+
         for(i = 0; i < num_server; i++)
+        {
+            if (verbose_mode)
+                printf("Clear connection list %d to %s:%d\n", i, connection_lists[i].ip, connection_lists[i].port);
             Clear_Conn_List(&connection_lists[i]);
+        }
     }
     free(connection_lists);
 }

@@ -15,7 +15,7 @@ In the main directory, run ```make```, then you will see **client**, **incast-cl
 In the main directory, do following operations:
 - Start server 
 ```
-nohup ./bin/server -p 5001 &
+./bin/server -p 5001 -d
 ```
 
 - Start client
@@ -32,11 +32,13 @@ nohup ./bin/server -p 5001 &
 ### Server
 Example:
 ```
-./bin/server -p 5001 
+./bin/server -p 5001 -d  
 ```
-* **-p** : the TCP **port** that the server should listen on (default 5001)
+* **-p** : the TCP **port** that the server listens on (default 5001)
 
-* **-d** : **debug** mode (print necessary information)
+* **-v** : give more detailed output (**verbose**)
+
+* **-d** : run the server as a **daemon**
 
 * **-h** : display help information
 
@@ -59,7 +61,7 @@ Example:
 
 * **-r** : python script to parse **result** files
 
-* **-d** : **debug** mode (print necessary information)
+* **-v** : give more detailed output (**verbose**)
 
 * **-h** : display **help** information
 

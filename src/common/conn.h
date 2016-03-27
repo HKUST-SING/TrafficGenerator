@@ -1,9 +1,9 @@
 #ifndef CONN_H
 #define CONN_H
 
-#include <stdlib.h>
-
 #define _GNU_SOURCE
+
+#include <stdlib.h>
 #include <pthread.h>
 #include <stdbool.h>
 
