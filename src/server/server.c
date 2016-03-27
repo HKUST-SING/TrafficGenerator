@@ -8,6 +8,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/time.h>
+#include <sys/stat.h>
+
 #include <pthread.h>
 
 #include "../common/common.h"
