@@ -1,11 +1,10 @@
+#include "conn.h"
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
-
-#include "conn.h"
 
 /* Initialize connection */
 bool Init_Conn_Node(struct Conn_Node* node, int id, struct Conn_List* list)
