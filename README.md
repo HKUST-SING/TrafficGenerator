@@ -70,7 +70,7 @@ Note that you need to specify either the number of requests (-n) or the time to 
 ### Incast-Client
 Example:
 ```
-./bin/incast-client -c conf/incast_client_config.txt -l log -s 123 -r src/script/result.py
+./bin/incast-client -b 900 -c conf/incast_client_config.txt -l log -s 123 -r src/script/result.py
 ```
 
 Same as **client** except for **-l**
