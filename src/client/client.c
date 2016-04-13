@@ -822,16 +822,18 @@ void print_statistic()
     for (i = 0; i < req_total_num; i++)
     {
         req_size_total += req_size[i];
+        if ((req_stop_time[i].tv_sec == 0) && (req_stop_time[i].tv_usec == 0))
+        {
+            printf("Unfinished flow request %u\n", i);
+            continue;
+        }
+
         fct_us = (req_stop_time[i].tv_sec - req_start_time[i].tv_sec) * 1000000 + req_stop_time[i].tv_usec - req_start_time[i].tv_usec;
         if (fct_us > 0)
             flow_goodput_mbps = req_size[i] * 8 / fct_us;
         else
             flow_goodput_mbps = 0;
-
         fprintf(fd, "%u %llu %u %u %u\n", req_size[i], fct_us, req_dscp[i], req_rate[i], flow_goodput_mbps);    //size, FCT(us), DSCP, sending rate (Mbps), goodput (Mbps)
-
-        if ((req_stop_time[i].tv_sec == 0) && (req_stop_time[i].tv_usec == 0))
-            printf("Unfinished flow request %u\n", i);
     }
 
     fclose(fd);

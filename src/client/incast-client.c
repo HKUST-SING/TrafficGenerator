@@ -1018,16 +1018,18 @@ void print_statistic()
     for (i = 0; i < req_total_num; i++)
     {
         req_size_total += req_size[i];
+        if ((req_stop_time[i].tv_sec == 0) && (req_stop_time[i].tv_usec == 0))
+        {
+            printf("Unfinished request %u\n", i);
+            continue;
+        }
+
         rct_us = (req_stop_time[i].tv_sec - req_start_time[i].tv_sec) * 1000000 + req_stop_time[i].tv_usec - req_start_time[i].tv_usec;
         if (rct_us > 0)
             req_goodput_mbps = req_size[i] * 8 / rct_us;
         else
             req_goodput_mbps = 0;
-
         fprintf(fd, "%u %llu %u %u %u %u\n", req_size[i], rct_us, req_dscp[i], req_rate[i], req_goodput_mbps, req_fanout[i]);    //request size, RCT(us), DSCP, sending rate (Mbps), goodput (Mbps), fanout
-
-        if ((req_stop_time[i].tv_sec == 0) && (req_stop_time[i].tv_usec == 0))
-            printf("Unfinished request %u\n", i);
     }
     fclose(fd);
 
@@ -1040,6 +1042,12 @@ void print_statistic()
 
     for (i = 0; i < flow_total_num; i++)
     {
+        if ((flow_stop_time[i].tv_sec == 0) && (flow_stop_time[i].tv_usec == 0))
+        {
+            printf("Unfinished flow %u\n", i);
+            continue;
+        }
+
         fct_us = (flow_stop_time[i].tv_sec - flow_start_time[i].tv_sec) * 1000000 + flow_stop_time[i].tv_usec - flow_start_time[i].tv_usec;
         req_id = flow_req_id[i];
         if (fct_us > 0)
@@ -1048,9 +1056,6 @@ void print_statistic()
             flow_goodput_mbps = 0;
 
         fprintf(fd, "%u %llu %u %u %u\n", req_size[req_id]/req_fanout[req_id], fct_us, req_dscp[req_id], req_rate[req_id], flow_goodput_mbps);  //flow size, FCT(us), DSCP, sending rate (Mbps), goodput (Mbps)
-
-        if ((flow_stop_time[i].tv_sec == 0) && (flow_stop_time[i].tv_usec == 0))
-            printf("Unfinished flow %u\n", i);
     }
     fclose(fd);
 
