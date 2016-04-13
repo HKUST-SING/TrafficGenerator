@@ -40,6 +40,6 @@ double poission_gen_interval(double avg_rate);
 unsigned int get_usleep_overhead(int iter_num);
 
 /* Randomly generate a value based on weights */
-int gen_value_weight(int *values, int *weights, int len, int weight_total);
+unsigned int gen_value_weight(unsigned int *values, unsigned int *weights, unsigned int len, unsigned int weight_total);
 
 #endif
