@@ -198,11 +198,21 @@ void Wait_Conn_List(struct Conn_List* list)
             break;
         else
         {
-            clock_gettime(CLOCK_REALTIME, &ts);
-            ts.tv_sec += 5;
-            s = pthread_timedjoin_np(ptr->thread, NULL, &ts);
-            if (s != 0)
-                perror("Cannot wait for this thread to stop\n");
+            /* If this connection is active, we need to wait for long enough time */
+            if (ptr->connected)
+            {
+                s = pthread_join(ptr->thread, NULL);
+                if (s != 0)
+                    perror("Cannot wait for this thread to stop\n");
+            }
+            else
+            {
+                clock_gettime(CLOCK_REALTIME, &ts);
+                ts.tv_sec += 5;
+                s = pthread_timedjoin_np(ptr->thread, NULL, &ts);
+                if (s != 0)
+                    perror("Cannot wait for this thread to stop\n");
+            }
             ptr = ptr->next;
         }
     }

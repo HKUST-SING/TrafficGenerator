@@ -168,10 +168,10 @@ unsigned int get_usleep_overhead(int iter_num)
 }
 
 /* Randomly generate value based on weights */
-int gen_value_weight(int *values, int *weights, int len, int weight_total)
+unsigned int gen_value_weight(unsigned int *values, unsigned int *weights, unsigned int len, unsigned int weight_total)
 {
-    int i = 0;
-    int val = rand() % weight_total;
+    unsigned int i = 0;
+    unsigned int val = rand() % weight_total;
 
     for (i = 0; i < len; i++)
     {
