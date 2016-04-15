@@ -103,7 +103,7 @@ dscp 1 25
 dscp 2 25
 dscp 3 25
 ```
-For each request, the client chooses a DSCP value with a probability proportional to the weight. The traffic of the request and the corresponding response(s) will be marked with this DSCP value. If the user does not specify the DSCP distribution, the DSCP value is always 0 for all requests. 
+For each request, the client chooses a DSCP value with a probability proportional to the weight. The traffic of the request and the corresponding response(s) will be marked with this DSCP value. If the user does not specify the DSCP distribution, the DSCP value is always 0 for all requests. **This feature can be used to create multiple classes of traffic (e.g., section 5.1.2 of [MQ-ECN](https://www.usenix.org/system/files/conference/nsdi16/nsdi16-paper-bai.pdf) paper).**  
 
 * **rate:** sending rate and weight. The sending rate (in Mbps) and weight are both integers.
 ```
@@ -111,7 +111,7 @@ rate 0Mbps 10
 rate 500Mbps 30
 rate 800Mbps 60
 ```
-For each request, the client chooses a rate with a probability proportional to the weight. To enforce the sending rate, the sender will add some delay on the application layer. Note that 0Mbps rate value indeed indicates no rate limiting. If the user does not specify the sending rate distribution, the sender will not rate-limit traffic.
+For each request, the client chooses a rate with a probability proportional to the weight. To enforce the sending rate, the sender will add some delay at the application layer. *Note that 0Mbps indicates no rate limiting.* If the user specifies very low sending rates, the client may achieve a much lower average RX throughput in practice, which is undesirable. If the user does not specify the sending rate distribution, the sender will not rate-limit the traffic. **We suggest the user simply disabling this feature except for some special scenarios.**   
 
 * **fanout:** fanout value and weight. Note that only **incast-client** need this key. The fanout and weight are both 
 integers.
