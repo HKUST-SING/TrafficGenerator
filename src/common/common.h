@@ -42,4 +42,7 @@ unsigned int get_usleep_overhead(int iter_num);
 /* Randomly generate a value based on weights */
 unsigned int gen_value_weight(unsigned int *values, unsigned int *weights, unsigned int len, unsigned int weight_total);
 
+/* Display progress */
+void display_progress(unsigned int num_finished, unsigned int num_total);
+
 #endif

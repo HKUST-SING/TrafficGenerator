@@ -167,13 +167,13 @@ int main(int argc, char *argv[])
     printf("===========================================\n");
     gettimeofday(&tv_start, NULL);
     run_requests();
-    gettimeofday(&tv_end, NULL);
 
     /* Close existing connections */
     printf("===========================================\n");
     printf("Exit connections\n");
     printf("===========================================\n");
     exit_connections();
+    gettimeofday(&tv_end, NULL);
 
     printf("===========================================\n");
     for (i = 0; i < num_server; i++)
@@ -672,6 +672,7 @@ void *listen_connection(void *ptr)
 void run_requests()
 {
     unsigned int i = 0;
+    unsigned int k = 1;
     unsigned int sleep_us = 0;
 
     for (i = 0; i < req_total_num; i++)
@@ -683,7 +684,15 @@ void run_requests()
             sleep_us = 0;
         }
         run_request(i);
+
+        if (!verbose_mode && i + 1 >= k * req_total_num / 100)
+        {
+            display_progress(i + 1, req_total_num);
+            k++;
+        }
     }
+    if (!verbose_mode)
+        printf("\n");
 }
 
 /* Generate a flow request to the server */

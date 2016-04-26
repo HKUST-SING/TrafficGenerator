@@ -195,13 +195,13 @@ int main(int argc, char *argv[])
     gettimeofday(&tv_start, NULL);
     global_flow_id =  0;
     run_requests();
-    gettimeofday(&tv_end, NULL);
 
     /* Close existing connections */
     printf("===========================================\n");
     printf("Exit connections\n");
     printf("===========================================\n");
     exit_connections();
+    gettimeofday(&tv_end, NULL);
 
     printf("===========================================\n");
     for (i = 0; i < num_server; i++)
@@ -795,6 +795,7 @@ void *listen_connection(void *ptr)
 void run_requests()
 {
     unsigned int i = 0;
+    unsigned int k = 1;
     unsigned int req_duration_us = 0;
     int sleep_us = 0;
     struct timeval req_tv_start, req_tv_end;
@@ -812,7 +813,15 @@ void run_requests()
             usleep(sleep_us - usleep_overhead_us - req_duration_us);
             sleep_us = 0;
         }
+
+        if (!verbose_mode && i + 1 >= k * req_total_num / 100)
+        {
+            display_progress(i + 1, req_total_num);
+            k++;
+        }
     }
+    if (!verbose_mode)
+        printf("\n");
 }
 
 /* Generate a incast request to some servers */
