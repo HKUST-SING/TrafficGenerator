@@ -183,3 +183,13 @@ unsigned int gen_value_weight(unsigned int *values, unsigned int *weights, unsig
 
     return values[len - 1];
 }
+
+/* Display progress */
+void display_progress(unsigned int num_finished, unsigned int num_total)
+{
+    if (num_total > 0)
+    {
+        printf("Generate %u / %u (%.1f%%) requests\r", num_finished, num_total, (num_finished * 100 + 0.0) / num_total);
+        fflush(stdout);
+    }
+}
