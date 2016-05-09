@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <stddef.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -8,6 +9,11 @@
 #include <math.h>
 
 #include "common.h"
+
+/* buffer to use w/o rate limiting */
+static char max_write_buf[TG_MAX_WRITE] = {0};
+/* buffer to use with rate limiting */
+static char min_write_buf[TG_MIN_WRITE] = {0};
 
 /*
  * This function attemps to read exactly count bytes from file descriptor fd
@@ -24,13 +30,15 @@
  * dummy_buf = false, and at least min{count, max_per_read} when
  * dummy_buf = true.
  */
-unsigned int read_exact(int fd, char *buf, size_t count,
-    size_t max_per_read, bool dummy_buf)
+unsigned int read_exact(int fd, char *buf, size_t count, size_t max_per_read, bool dummy_buf)
 {
-    unsigned int bytes_total_read = 0;  //total number of bytes that have been read
-    unsigned int bytes_to_read = 0; //maximum number of bytes to read in next read() call
-    char *cur_buf = NULL;   //current location
-    int n;  //number of bytes read in current read() call
+    unsigned int bytes_total_read = 0;  /* total number of bytes that have been read */
+    unsigned int bytes_to_read = 0; /* maximum number of bytes to read in next read() call */
+    char *cur_buf = NULL;   /* current location */
+    int n;  /* number of bytes read in current read() call */
+
+    if (!buf)
+        return 0;
 
     while (count > 0)
     {
@@ -41,7 +49,7 @@ unsigned int read_exact(int fd, char *buf, size_t count,
         if (n <= 0)
         {
             if (n < 0)
-                perror("ERROR: read in read_exact()");
+                printf("Error: read() in read_exact()");
             break;
         }
         else
@@ -53,7 +61,6 @@ unsigned int read_exact(int fd, char *buf, size_t count,
 
     return bytes_total_read;
 }
-
 
 /*
  * This function attemps to write exactly count bytes from the buffer starting
@@ -73,21 +80,18 @@ unsigned int read_exact(int fd, char *buf, size_t count,
  * Users can also set ToS value for traffic.
  */
 unsigned int write_exact(int fd, char *buf, size_t count, size_t max_per_write,
-    unsigned int rate_mbps, unsigned int tos, unsigned int usleep_overhead_us, bool dummy_buf)
+    unsigned int rate_mbps, unsigned int tos, unsigned int sleep_overhead_us, bool dummy_buf)
 {
-    unsigned int bytes_total_write = 0;  //total number of bytes that have been written
-    unsigned int bytes_to_write = 0; //maximum number of bytes to write in next send() call
-    char *cur_buf = NULL;   //current location
-    int n;  //number of bytes read in current read() call
-    struct timeval tv_start, tv_end;    //start and end time of write
-    long sleep_us = 0;  //sleep time (us)
-    long write_us = 0;  //time used for write()
+    unsigned int bytes_total_write = 0; /* total number of bytes that have been written */
+    unsigned int bytes_to_write = 0;    /* maximum number of bytes to write in next send() call */
+    char *cur_buf = NULL;   /* current location */
+    int n;  /* number of bytes read in current read() call */
+    struct timeval tv_start, tv_end;    /* start and end time of write */
+    long sleep_us = 0;  /* sleep time (us) */
+    long write_us = 0;  /* time used for write() */
 
     if (setsockopt(fd, IPPROTO_IP, IP_TOS, &tos, sizeof(tos)) < 0)
-    {
-        perror("Error: set IP_TOS option");
-        return 0;
-    }
+        printf("Error: set IP_TOS option in write_exact()");
 
     while (count > 0)
     {
@@ -102,16 +106,16 @@ unsigned int write_exact(int fd, char *buf, size_t count, size_t max_per_write,
         if (n <= 0)
         {
             if (n < 0)
-                perror("ERROR: write in write_exact()");
+                printf("Error: write() in write_exact()");
             break;
         }
         else
         {
             bytes_total_write += n;
             count -= n;
-            if (usleep_overhead_us < sleep_us)
+            if (sleep_overhead_us < sleep_us)
             {
-                usleep(sleep_us - usleep_overhead_us);
+                usleep(sleep_us - sleep_overhead_us);
                 sleep_us = 0;
             }
         }
@@ -120,14 +124,96 @@ unsigned int write_exact(int fd, char *buf, size_t count, size_t max_per_write,
     return bytes_total_write;
 }
 
-/* Print error information */
+/* read the metadata of a flow and return true if it succeeds. */
+bool read_flow_metadata(int fd, struct flow_metadata *f)
+{
+    char buf[TG_METADATA_SIZE] = {0};
+
+    if (!f)
+        return false;
+
+    if (read_exact(fd, buf, TG_METADATA_SIZE, TG_METADATA_SIZE, false) != TG_METADATA_SIZE)
+        return false;
+
+    /* extract meta data */
+    memcpy(&(f->id), buf + offsetof(struct flow_metadata, id), sizeof(f->id));
+    memcpy(&(f->size), buf + offsetof(struct flow_metadata, size), sizeof(f->size));
+    memcpy(&(f->tos), buf + offsetof(struct flow_metadata, tos), sizeof(f->tos));
+    memcpy(&(f->rate), buf + offsetof(struct flow_metadata, rate), sizeof(f->rate));
+
+    return true;
+}
+
+/* write a flow request into a socket and return true if it succeeds */
+bool write_flow_req(int fd, struct flow_metadata *f)
+{
+    char buf[TG_METADATA_SIZE] = {0};   /* buffer to hold metadata */
+
+    if (!f)
+        return false;
+
+    /* fill in meta data */
+    memcpy(buf + offsetof(struct flow_metadata, id), &(f->id), sizeof(f->id));
+    memcpy(buf + offsetof(struct flow_metadata, size), &(f->size), sizeof(f->size));
+    memcpy(buf + offsetof(struct flow_metadata, tos),  &(f->tos), sizeof(f->tos));
+    memcpy(buf + offsetof(struct flow_metadata, rate), &(f->rate), sizeof(f->rate));
+
+    /* write the request into the socket */
+    if (write_exact(fd, buf, TG_METADATA_SIZE, TG_METADATA_SIZE, 0, f->tos, 0, false) == TG_METADATA_SIZE)
+        return true;
+    else
+        return false;
+}
+
+/* write a flow (response) into a socket and return true if it succeeds */
+bool write_flow(int fd, struct flow_metadata *f, unsigned int sleep_overhead_us)
+{
+    char *write_buf = NULL;  /* buffer to hold the real content of the flow */
+    unsigned int max_per_write = 0;
+    unsigned int result = 0;
+
+    if (!f)
+        return false;
+
+    /* echo back meta data */
+    if (!write_flow_req(fd, f))
+    {
+        printf("Error: write_flow_req() in write_flow()\n");
+        return false;
+    }
+
+    /* use min_write_buf with rate limiting */
+    if (f->rate > 0)
+    {
+        write_buf = min_write_buf;
+        max_per_write = TG_MIN_WRITE;
+    }
+    /* use max_write_buf w/o rate limiting */
+    else
+    {
+        write_buf = max_write_buf;
+        max_per_write = TG_MAX_WRITE;
+    }
+
+    /* generate the flow response */
+    result = write_exact(fd, write_buf, f->size, max_per_write, f->rate, f->tos, sleep_overhead_us, true);
+    if (result == f->size)
+        return true;
+    else
+    {
+        printf("Error: write_exact() in write_flow(). Only successfully write %u of %u bytes.\n", result, f->size);
+        return false;
+    }
+}
+
+/* print error information */
 void error(char *msg)
 {
     perror(msg);
     exit(EXIT_FAILURE);
 }
 
-/* Remove \r \n from a string */
+/* remove '\r' and '\n' from a string */
 void remove_newline(char *str)
 {
     int i = 0;
@@ -139,7 +225,7 @@ void remove_newline(char *str)
     }
 }
 
-/* Generate poission process arrival interval */
+/* generate poission process arrival interval */
 double poission_gen_interval(double avg_rate)
 {
     if (avg_rate > 0)
@@ -148,12 +234,12 @@ double poission_gen_interval(double avg_rate)
         return 0;
 }
 
-/* Calculate usleep overhead */
+/* calculate usleep overhead */
 unsigned int get_usleep_overhead(int iter_num)
 {
     int i=0;
     unsigned int tot_sleep_us = 0;
-    struct timeval tv_start, tv_end;    //start and end time
+    struct timeval tv_start, tv_end;
 
     if (iter_num <= 0)
         return 0;
@@ -167,7 +253,7 @@ unsigned int get_usleep_overhead(int iter_num)
     return tot_sleep_us/iter_num;
 }
 
-/* Randomly generate value based on weights */
+/* randomly generate value based on weights */
 unsigned int gen_value_weight(unsigned int *values, unsigned int *weights, unsigned int len, unsigned int weight_total)
 {
     unsigned int i = 0;
@@ -184,7 +270,7 @@ unsigned int gen_value_weight(unsigned int *values, unsigned int *weights, unsig
     return values[len - 1];
 }
 
-/* Display progress */
+/* display progress */
 void display_progress(unsigned int num_finished, unsigned int num_total)
 {
     if (num_total > 0)

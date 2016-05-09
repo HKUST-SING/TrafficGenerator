@@ -6,10 +6,10 @@
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 
-/* Initialize connection */
-bool Init_Conn_Node(struct Conn_Node* node, int id, struct Conn_List* list)
+/* initialize connection */
+bool init_conn_node(struct conn_node *node, int id, struct conn_list *list)
 {
-    struct sockaddr_in serv_addr;   //Server address
+    struct sockaddr_in serv_addr;
     int sock_opt = 1;
 
     if (!node)
@@ -26,7 +26,7 @@ bool Init_Conn_Node(struct Conn_Node* node, int id, struct Conn_List* list)
     serv_addr.sin_addr.s_addr = inet_addr(list->ip);
     serv_addr.sin_port = htons(list->port);
 
-    /* Initialize server socket */
+    /* initialize server socket */
     node->sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (node->sockfd < 0)
     {
@@ -34,7 +34,7 @@ bool Init_Conn_Node(struct Conn_Node* node, int id, struct Conn_List* list)
         return false;
     }
 
-    /* Set socket options */
+    /* set socket options */
     if (setsockopt(node->sockfd, SOL_SOCKET, SO_REUSEADDR, &sock_opt, sizeof(sock_opt)) < 0)
     {
         perror("Error: set SO_REUSEADDR option");
@@ -56,7 +56,7 @@ bool Init_Conn_Node(struct Conn_Node* node, int id, struct Conn_List* list)
     return true;
 }
 
-bool Init_Conn_List(struct Conn_List* list, int index, char *ip, unsigned short port)
+bool init_conn_list(struct conn_list *list, int index, char *ip, unsigned short port)
 {
     if (!list)
         return false;
@@ -81,25 +81,25 @@ bool Init_Conn_List(struct Conn_List* list, int index, char *ip, unsigned short 
     return true;
 }
 
-/* Insert several nodes to the tail of the linked list */
-bool Insert_Conn_List(struct Conn_List* list, int num)
+/* insert several nodes to the tail of the linked list */
+bool insert_conn_list(struct conn_list *list, int num)
 {
     int i = 0;
-    struct Conn_Node* new_node = NULL;
+    struct conn_node *new_node = NULL;
 
     if (!list)
         return false;
 
     for (i = 0; i < num; i++)
     {
-        new_node = (struct Conn_Node*)malloc(sizeof(struct Conn_Node));
-        if (!Init_Conn_Node(new_node, list->len, list))
+        new_node = (struct conn_node*)malloc(sizeof(struct conn_node));
+        if (!init_conn_node(new_node, list->len, list))
         {
             free(new_node);
             return false;
         }
 
-        /* If the list is empty */
+        /* if the list is empty */
         if (list->len == 0)
         {
             list->head = new_node;
@@ -119,10 +119,10 @@ bool Insert_Conn_List(struct Conn_List* list, int num)
     return true;
 }
 
-/* Find the first available connection (busy==false && connected==true) in the list. */
-struct Conn_Node* Search_Conn_List(struct Conn_List* list)
+/* search the first available connection (busy==false && connected==true) in the list. */
+struct conn_node *search_conn_list(struct conn_list *list)
 {
-    struct Conn_Node* ptr = NULL;
+    struct conn_node *ptr = NULL;
 
     if (!list || !(list->available_len))
         return NULL;
@@ -141,17 +141,17 @@ struct Conn_Node* Search_Conn_List(struct Conn_List* list)
     return NULL;
 }
 
-/* Find N available connections in the list */
-struct Conn_Node** Search_N_Conn_List(struct Conn_List* list, unsigned int num)
+/* search N available connections in the list */
+struct conn_node **search_n_conn_list(struct conn_list *list, unsigned int num)
 {
-    struct Conn_Node* ptr = NULL;
-    struct Conn_Node** result = NULL;
+    struct conn_node *ptr = NULL;
+    struct conn_node **result = NULL;
     int i = 0;
 
     if (!list || list->available_len < num || !num)
         return NULL;
 
-    result = (struct Conn_Node**)malloc(num * sizeof(struct Conn_Node*));
+    result = (struct conn_node**)malloc(num * sizeof(struct conn_node*));
     if (!result)
     {
         perror("Error: malloc");
@@ -181,10 +181,10 @@ struct Conn_Node** Search_N_Conn_List(struct Conn_List* list, unsigned int num)
     return NULL;
 }
 
-/* Wait for all threads in the linked list to finish */
-void Wait_Conn_List(struct Conn_List* list)
+/* wait for all threads in the linked list to finish */
+void wait_conn_list(struct conn_list *list)
 {
-    struct Conn_Node* ptr = NULL;
+    struct conn_node *ptr = NULL;
     struct timespec ts;
     int s;
 
@@ -198,7 +198,7 @@ void Wait_Conn_List(struct Conn_List* list)
             break;
         else
         {
-            /* If this connection is active, we need to wait for long enough time */
+            /* if this connection is active, we need to wait for long enough time */
             if (ptr->connected)
             {
                 s = pthread_join(ptr->thread, NULL);
@@ -218,11 +218,11 @@ void Wait_Conn_List(struct Conn_List* list)
     }
 }
 
-/* Clear all the nodes in the linked list */
-void Clear_Conn_List(struct Conn_List* list)
+/* clear all the nodes in the linked list */
+void clear_conn_list(struct conn_list *list)
 {
-    struct Conn_Node* ptr = NULL;
-    struct Conn_Node* next_node = NULL;
+    struct conn_node *ptr = NULL;
+    struct conn_node *next_node = NULL;
 
     if (!list)
         return;
@@ -236,8 +236,8 @@ void Clear_Conn_List(struct Conn_List* list)
     list->len = 0;
 }
 
-/* Print information of the linked list */
-void Print_Conn_List(struct Conn_List* list)
+/* print information of the linked list */
+void print_conn_list(struct conn_list *list)
 {
     if (list)
         printf("%s:%hu  total connection number: %u  available connection number: %u  flows finished: %u\n", list->ip, list->port, list->len, list->available_len, list->flow_finished);
