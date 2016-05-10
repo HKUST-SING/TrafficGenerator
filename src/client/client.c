@@ -600,7 +600,7 @@ void set_req_variables()
         printf("%s:%u    %u requests\n", server_addr[i], server_port[i], server_req_count[i]);
 
     printf("===========================================\n");
-    printf("The average reuest qarrival interval is %lu us\n", req_interval_total/req_total_num);
+    printf("The average request arrival interval is %lu us\n", req_interval_total/req_total_num);
     printf("The average request size is %lu bytes\n", req_size_total/req_total_num);
     printf("The average DSCP value is %.2f\n", dscp_total/req_total_num);
     printf("The average flow sending rate is %lu Mbps\n", rate_total/req_total_num);
