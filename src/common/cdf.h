@@ -6,38 +6,38 @@
 
 #define TG_CDF_TABLE_ENTRY 32
 
-struct CDF_Entry
+struct cdf_entry
 {
     double value;
     double cdf;
 };
 
 /* CDF distribution */
-struct CDF_Table
+struct cdf_table
 {
-    struct CDF_Entry* entries;
-    int num_entry;  //number of entries in CDF table
-    int max_entry; //maximum number of entries in CDF table
-    double min_cdf;    //min value of CDF (default 0)
-    double max_cdf;    //max value of CDF (default 1)
+    struct cdf_entry *entries;
+    int num_entry;  /* number of entries in CDF table */
+    int max_entry;  /* maximum number of entries in CDF table */
+    double min_cdf; /* minimum value of CDF (default 0) */
+    double max_cdf; /* maximum value of CDF (default 1) */
 };
 
-/* Initialize a CDF distribution */
-void init_CDF(struct CDF_Table* table);
+/* initialize a CDF distribution */
+void init_cdf(struct cdf_table *table);
 
-/* Free resources of a CDF distribution */
-void free_CDF(struct CDF_Table* table);
+/* free resources of a CDF distribution */
+void free_cdf(struct cdf_table *table);
 
-/* Get CDF distribution from a given file */
-void load_CDF(struct CDF_Table* table, char *file_name);
+/* get CDF distribution from a given file */
+void load_cdf(struct cdf_table *table, char *file_name);
 
-/* Print CDF distribution information */
-void print_CDF(struct CDF_Table* table);
+/* print CDF distribution information */
+void print_cdf(struct cdf_table *table);
 
-/* Get average value of CDF distribution */
-double avg_CDF(struct CDF_Table* table);
+/* get average value of CDF distribution */
+double avg_cdf(struct cdf_table *table);
 
 /* Generate a random value based on CDF distribution */
-double gen_random_CDF(struct CDF_Table* table);
+double gen_random_cdf(struct cdf_table *table);
 
 #endif
