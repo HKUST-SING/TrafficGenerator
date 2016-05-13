@@ -94,9 +94,9 @@ void set_req_variables();
 /* receive traffic from established connections */
 void *listen_connection(void *ptr);
 /* generate incast requests */
-void run_requests();
+void run_incast_requests();
 /* generate a incast request to some servers */
-void run_request(unsigned int req_id);
+void run_incast_request(unsigned int req_id);
 /* generate a flow request to a server */
 void *run_flow(void *ptr);
 /* terminate all existing connections */
@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
     printf("===========================================\n");
     gettimeofday(&tv_start, NULL);
     global_flow_id =  0;
-    run_requests();
+    run_incast_requests();
 
     /* close existing connections */
     printf("===========================================\n");
@@ -778,7 +778,7 @@ void *listen_connection(void *ptr)
 }
 
 /* generate incast requests */
-void run_requests()
+void run_incast_requests()
 {
     unsigned int i = 0;
     unsigned int k = 1;
@@ -789,7 +789,7 @@ void run_requests()
     for (i = 0; i < req_total_num; i++)
     {
         gettimeofday(&req_tv_start, NULL);
-        run_request(i);
+        run_incast_request(i);
         gettimeofday(&req_tv_end, NULL);
         req_duration_us = (req_tv_end.tv_sec - req_tv_start.tv_sec) * 1000000 + req_tv_end.tv_usec - req_tv_start.tv_usec;
 
@@ -811,7 +811,7 @@ void run_requests()
 }
 
 /* generate a incast request to some servers */
-void run_request(unsigned int req_id)
+void run_incast_request(unsigned int req_id)
 {
     unsigned int conn_id, num_conn, num_conn_new = 0;
     unsigned int i, k = 0;
