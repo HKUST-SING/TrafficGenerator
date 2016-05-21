@@ -1,6 +1,5 @@
 import sys
 import os
-import glob
 
 ''' Parse a file to get FCT and goodput results '''
 def parse_file(file_name):
@@ -26,12 +25,12 @@ def average_result(input_tuple_list, index):
     else:
         return 0
 
-''' Get 99th percentile result '''
-def tail_result(input_tuple_list, index):
+''' Get cumulative distribution function (CDF) result '''
+def cdf_result(input_tuple_list, index, cdf):
     input_list = [x[index] for x in input_tuple_list]
     input_list.sort()
-    if len(input_list) > 0:
-        return input_list[int(0.99 * len(input_list))]
+    if len(input_list) > 0 and cdf >= 0 and cdf <= 1:
+        return input_list[int(cdf * len(input_list))]
     else:
         return 0
 
@@ -41,11 +40,11 @@ def average_fct_result(input_tuple_list):
 def average_goodput_result(input_tuple_list):
     return average_result(input_tuple_list, 2)
 
-def tail_fct_result(input_tuple_list):
-    return tail_result(input_tuple_list, 1)
+def cdf_fct_result(input_tuple_list, cdf):
+    return cdf_result(input_tuple_list, 1, cdf)
 
-def tail_goodput_result(input_tuple_list):
-    return tail_result(input_tuple_list, 2)
+def cdf_goodput_result(input_tuple_list, cdf):
+    return cdf_result(input_tuple_list, 2, cdf)
 
 
 def print_result(results):
@@ -58,18 +57,18 @@ def print_result(results):
 
     print '%d flows/requests overall average completion time: %d us' % (len(results), average_fct_result(results))
     print '%d flows/requests (0, 100KB) average completion time: %d us' % (len(small), average_fct_result(small))
-    print '%d flows/requests (0, 100KB) 99th percentile completion time: %d us' % (len(small), tail_fct_result(small))
+    print '%d flows/requests (0, 100KB) 99th percentile completion time: %d us' % (len(small), cdf_fct_result(small, 0.99))
     print '%d flows/requests [100KB, 10MB) average completion time: %d us' % (len(medium), average_fct_result(medium))
     print '%d flows/requests [10MB, ) average completion time: %d us' % (len(large), average_fct_result(large))
     print '%d flows/requests overall average goodput: %d Mbps' % (len(results), average_goodput_result(results))
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        print 'Usages: %s [result path (e.g., "*.txt")]' % sys.argv[0]
+    if len(sys.argv) < 2:
+        print 'Usages: %s <file1> [file2 ...]' % sys.argv[0]
         sys.exit()
 
-    files = glob.glob(sys.argv[1])
+    files = sys.argv[1:]
     final_results = []
     num_file_parse = 0
 
