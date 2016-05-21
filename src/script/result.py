@@ -66,6 +66,7 @@ def print_result(results):
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
+        print 'Usages: %s [result path (e.g., "*.txt")]' % sys.argv[0]
         sys.exit()
 
     files = glob.glob(sys.argv[1])
