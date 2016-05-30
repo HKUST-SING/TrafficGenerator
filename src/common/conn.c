@@ -30,25 +30,25 @@ bool init_conn_node(struct conn_node *node, int id, struct conn_list *list)
     node->sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (node->sockfd < 0)
     {
-        perror("Error: initialize socket");
+        perror("Error: initialize socket in init_conn_node()");
         return false;
     }
 
     /* set socket options */
     if (setsockopt(node->sockfd, SOL_SOCKET, SO_REUSEADDR, &sock_opt, sizeof(sock_opt)) < 0)
     {
-        perror("Error: set SO_REUSEADDR option");
+        perror("Error: set SO_REUSEADDR in init_conn_node()");
         return false;
     }
     if (setsockopt(node->sockfd, IPPROTO_TCP, TCP_NODELAY, &sock_opt, sizeof(sock_opt)) < 0)
     {
-        perror("ERROR: set TCP_NODELAY option");
+        perror("Error: set TCP_NODELAY in init_conn_node()");
         return false;
     }
 
     if (connect(node->sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
     {
-        perror("Error: connect");
+        perror("Error: connect() in init_conn_node()");
         return false;
     }
 
@@ -154,7 +154,7 @@ struct conn_node **search_n_conn_list(struct conn_list *list, unsigned int num)
     result = (struct conn_node**)malloc(num * sizeof(struct conn_node*));
     if (!result)
     {
-        perror("Error: malloc");
+        perror("Error: malloc result in search_n_conn_list()");
         return NULL;
     }
 
@@ -203,7 +203,7 @@ void wait_conn_list(struct conn_list *list)
             {
                 s = pthread_join(ptr->thread, NULL);
                 if (s != 0)
-                    perror("Cannot wait for this thread to stop\n");
+                    perror("Cannot wait for this thread to stop in wait_conn_list()\n");
             }
             else
             {
@@ -211,7 +211,7 @@ void wait_conn_list(struct conn_list *list)
                 ts.tv_sec += 5;
                 s = pthread_timedjoin_np(ptr->thread, NULL, &ts);
                 if (s != 0)
-                    perror("Cannot wait for this thread to stop\n");
+                    perror("Cannot wait for this thread to stop in wait_conn_list()\n");
             }
             ptr = ptr->next;
         }

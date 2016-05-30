@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
             error("Error: generate request");
 
         if (!read_flow_metadata(sockfd, &flow))
-            error("Error: read meta data");
+            error("Error: read metadata");
 
         if (read_exact(sockfd, read_buf, flow.size, TG_MAX_READ, true) != flow.size)
             error("Error: receive flow");

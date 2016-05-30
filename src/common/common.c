@@ -135,7 +135,7 @@ bool read_flow_metadata(int fd, struct flow_metadata *f)
     if (read_exact(fd, buf, TG_METADATA_SIZE, TG_METADATA_SIZE, false) != TG_METADATA_SIZE)
         return false;
 
-    /* extract meta data */
+    /* extract metadata */
     memcpy(&(f->id), buf + offsetof(struct flow_metadata, id), sizeof(f->id));
     memcpy(&(f->size), buf + offsetof(struct flow_metadata, size), sizeof(f->size));
     memcpy(&(f->tos), buf + offsetof(struct flow_metadata, tos), sizeof(f->tos));
@@ -152,7 +152,7 @@ bool write_flow_req(int fd, struct flow_metadata *f)
     if (!f)
         return false;
 
-    /* fill in meta data */
+    /* fill in metadata */
     memcpy(buf + offsetof(struct flow_metadata, id), &(f->id), sizeof(f->id));
     memcpy(buf + offsetof(struct flow_metadata, size), &(f->size), sizeof(f->size));
     memcpy(buf + offsetof(struct flow_metadata, tos),  &(f->tos), sizeof(f->tos));
@@ -175,7 +175,7 @@ bool write_flow(int fd, struct flow_metadata *f, unsigned int sleep_overhead_us)
     if (!f)
         return false;
 
-    /* echo back meta data */
+    /* echo back metadata */
     if (!write_flow_req(fd, f))
     {
         printf("Error: write_flow_req() in write_flow()\n");
@@ -201,7 +201,7 @@ bool write_flow(int fd, struct flow_metadata *f, unsigned int sleep_overhead_us)
         return true;
     else
     {
-        printf("Error: write_exact() in write_flow(). Only successfully write %u of %u bytes.\n", result, f->size);
+        printf("Error: write_exact() in write_flow() only successfully writes %u of %u bytes.\n", result, f->size);
         return false;
     }
 }
