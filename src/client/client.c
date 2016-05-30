@@ -770,28 +770,22 @@ void exit_connections()
 void exit_connection(struct conn_node *node)
 {
     int sockfd;
-    unsigned int meta_data_size = 4 * sizeof(unsigned int);
-    char buf[4 * sizeof(unsigned int)] = {'\0'}; /* buffer to hold metadata */
-    unsigned int flow_id = 0; /* a special flow ID to terminate connection */
-    unsigned int flow_size = 100;
-    unsigned int flow_tos = 0;
-    unsigned int flow_rate = 0;
+    struct flow_metadata flow;
+    flow.id = 0;   /* a special flow ID to terminate connection */
+    flow.size = 100;
+    flow.tos = 0;
+    flow.rate = 0;
 
     if (!node)
         return;
 
-    memcpy(buf, &flow_id, sizeof(unsigned int));
-    memcpy(buf + sizeof(unsigned int), &flow_size, sizeof(unsigned int));
-    memcpy(buf + 2 * sizeof(unsigned int), &flow_tos, sizeof(unsigned int));
-    memcpy(buf + 3 * sizeof(unsigned int), &flow_rate, sizeof(unsigned int));
     sockfd = node->sockfd;
-
     pthread_mutex_lock(&(node->list->lock));
     node->list->available_len--;
     pthread_mutex_unlock(&(node->list->lock));
 
-    if(write_exact(sockfd, buf, meta_data_size, meta_data_size, 0, flow_tos, 0, false) != meta_data_size)
-        perror("Error: write metadata");
+    if (!write_flow_req(sockfd, &flow))
+        perror("Error: generate request");
 }
 
 void print_statistic()
