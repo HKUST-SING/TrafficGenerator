@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
     if (!connection_lists)
     {
         cleanup();
-        error("Error: calloc");
+        error("Error: calloc connection_lists");
     }
 
     /* initialize connection pool and establish connections to servers */
@@ -422,7 +422,7 @@ void read_config(char *file_name)
     /* parse configuration file for the first time */
     fd = fopen(file_name, "r");
     if (!fd)
-        error("Error: fopen");
+        error("Error: open configuration file for the first time");
 
     while (fgets(line, sizeof(line), fd))
     {
@@ -444,7 +444,7 @@ void read_config(char *file_name)
     if (num_server < 1)
         error("Error: configuration file should provide at least one server");
     if (num_dist != 1)
-        error("Error: configuration file should provide one request size distribution");
+        error("Error: configuration file should provide exactly one request size distribution");
 
     /* initialize configuration */
     /* per-server variables*/
@@ -464,7 +464,7 @@ void read_config(char *file_name)
     if (!server_port || !server_addr || !server_flow_count || !fanout_size || !fanout_prob || !dscp_value || !dscp_prob || !rate_value || !rate_prob)
     {
         cleanup();
-        error("Error: calloc");
+        error("Error: calloc per-server variables");
     }
 
     /* second time */
@@ -477,7 +477,7 @@ void read_config(char *file_name)
     if (!fd)
     {
         cleanup();
-        error("Error: fopen");
+        error("Error: open the configuration file for the second time");
     }
 
     while (fgets(line, sizeof(line), fd))
@@ -502,7 +502,7 @@ void read_config(char *file_name)
             if (!req_size_dist)
             {
                 cleanup();
-                error("Error: malloc");
+                error("Error: malloc req_size_dist");
             }
 
             init_cdf(req_size_dist);
@@ -929,7 +929,7 @@ void *run_flow(void *ptr)
     pthread_mutex_unlock(&(node->list->lock));
 
     if (!write_flow_req(sockfd, &(f.metadata)))
-        perror("Error: write meta data");
+        perror("Error: write metadata");
 
     return (void*)0;
 }
@@ -994,7 +994,7 @@ void print_statistic()
     if (!fd)
     {
         cleanup();
-        error("Error: fopen");
+        error("Error: open the RCT result file");
     }
 
     for (i = 0; i < req_total_num; i++)
@@ -1021,7 +1021,7 @@ void print_statistic()
     if (!fd)
     {
         cleanup();
-        error("Error: fopen");
+        error("Error: open the FCT result file");
     }
 
     for (i = 0; i < flow_total_num; i++)
