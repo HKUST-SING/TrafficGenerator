@@ -9,7 +9,7 @@ The **client** establishes *persistent TCP connections* to a list of servers and
 In the **client configuration file**, the user can specify the list of destination servers, the request size distribution, the Differentiated Services Code Point (DSCP) value distribution, the sending rate distribution and the request fanout distribution, . 
 
 ## Build
-In the main directory, run ```make```, then you will see **client**, **incast-client**, **simple-client** (generate static flows for simple test) and **server** in ./bin.    
+In the main directory, run ```make```, then you will see **client**, **incast-client**, **simple-client** (generate static flows for simple test), **server** and some python scripts in ./bin.    
 
 ## Quick Start
 In the main directory, do following operations:
@@ -20,12 +20,12 @@ In the main directory, do following operations:
 
 - Start client
 ```
-./bin/client -b 900 -c conf/client_config.txt -n 5000 -l flows.txt -s 123 -r src/script/result.py
+./bin/client -b 900 -c conf/client_config.txt -n 5000 -l flows.txt -s 123 -r bin/result.py
 ```
 
 - Start incast-client
 ```
-./bin/incast-client -b 900 -c conf/incast_client_config.txt -n 5000 -l log -s 123 -r src/script/result.py
+./bin/incast-client -b 900 -c conf/incast_client_config.txt -n 5000 -l log -s 123 -r bin/result.py
 ```
 
 ## Command Line Arguments
@@ -45,7 +45,7 @@ Example:
 ### Client
 Example:
 ```
-./bin/client -b 900 -c conf/client_config.txt -n 5000 -l flows.txt -s 123 -r src/script/result.py
+./bin/client -b 900 -c conf/client_config.txt -n 5000 -l flows.txt -s 123 -r bin/result.py
 ```
 * **-b** : expected average RX **bandwidth** in Mbits/sec
  
@@ -70,7 +70,7 @@ Note that you need to specify either the number of requests (-n) or the time to 
 ### Incast-Client
 Example:
 ```
-./bin/incast-client -b 900 -c conf/incast_client_config.txt -l log -s 123 -r src/script/result.py
+./bin/incast-client -b 900 -c conf/incast_client_config.txt -l log -s 123 -r bin/result.py
 ```
 
 Same as **client** except for **-l**
@@ -123,7 +123,7 @@ fanout 8 20
 For each request, the client chooses a fanout with a probability proportional to the weight. For example, with the above configuration, half the requests have fanout 1, and 20% have fanout 8. If the user does not specify the fanout distribution, the fanout size is always 1 for all requests.
 
 ##Output
-A successful run of **client** creates a file with flow completion time results. A successful run of **incast-client** creates two files with flow completion time results and request completion time results, respectively. You can directly use ./src/script/result.py to parse these files. 
+A successful run of **client** creates a file with flow completion time results. A successful run of **incast-client** creates two files with flow completion time results and request completion time results, respectively. You can directly use ./bin/result.py to parse these files. 
 
 In files with flow completion times, each line gives flow size (in bytes), flow completion time (in microseconds), DSCP value, desired sending rate (in Mbps) and actual per-flow goodput (in Mbps). 
 
