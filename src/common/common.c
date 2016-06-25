@@ -254,7 +254,7 @@ unsigned int get_usleep_overhead(int iter_num)
 }
 
 /* randomly generate value based on weights */
-unsigned int gen_value_weight(unsigned int *values, unsigned int *weights, unsigned int len, unsigned int weight_total)
+unsigned int gen_value_weight(unsigned int *vals, unsigned int *weights, unsigned int len, unsigned int weight_total)
 {
     unsigned int i = 0;
     unsigned int val = rand() % weight_total;
@@ -262,20 +262,20 @@ unsigned int gen_value_weight(unsigned int *values, unsigned int *weights, unsig
     for (i = 0; i < len; i++)
     {
         if (val < weights[i])
-            return values[i];
+            return vals[i];
         else
             val -= weights[i];
     }
 
-    return values[len - 1];
+    return vals[len - 1];
 }
 
 /* display progress */
 void display_progress(unsigned int num_finished, unsigned int num_total)
 {
-    if (num_total > 0)
-    {
-        printf("Generate %u / %u (%.1f%%) requests\r", num_finished, num_total, (num_finished * 100 + 0.0) / num_total);
-        fflush(stdout);
-    }
+    if (num_total == 0)
+        return;
+
+    printf("Generate %u / %u (%.1f%%) requests\r", num_finished, num_total, (num_finished * 100.0) / num_total);
+    fflush(stdout);
 }
