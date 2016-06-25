@@ -30,25 +30,33 @@ bool init_conn_node(struct conn_node *node, int id, struct conn_list *list)
     node->sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (node->sockfd < 0)
     {
-        perror("Error: initialize socket in init_conn_node()");
+        char msg[256] = {0};
+        snprintf(msg, 256, "Error: init socket (to %s:%hu) in init_conn_node()", list->ip, list->port);
+        perror(msg);
         return false;
     }
 
     /* set socket options */
     if (setsockopt(node->sockfd, SOL_SOCKET, SO_REUSEADDR, &sock_opt, sizeof(sock_opt)) < 0)
     {
-        perror("Error: set SO_REUSEADDR in init_conn_node()");
+        char msg[256] = {0};
+        snprintf(msg, 256, "Error: set SO_REUSEADDR (to %s:%hu) in init_conn_node()", list->ip, list->port);
+        perror(msg);
         return false;
     }
     if (setsockopt(node->sockfd, IPPROTO_TCP, TCP_NODELAY, &sock_opt, sizeof(sock_opt)) < 0)
     {
-        perror("Error: set TCP_NODELAY in init_conn_node()");
+        char msg[256] = {0};
+        snprintf(msg, 256, "Error: set TCP_NODELAY (to %s:%hu) in init_conn_node()", list->ip, list->port);
+        perror(msg);
         return false;
     }
 
     if (connect(node->sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
     {
-        perror("Error: connect() in init_conn_node()");
+        char msg[256] = {0};
+        snprintf(msg, 256, "Error: connect() (to %s:%hu) in init_conn_node()", list->ip, list->port);
+        perror(msg);
         return false;
     }
 
@@ -203,7 +211,12 @@ void wait_conn_list(struct conn_list *list)
             {
                 s = pthread_join(ptr->thread, NULL);
                 if (s != 0)
-                    perror("Cannot wait for this thread to stop in wait_conn_list()\n");
+                {
+                    char msg[256] = {0};
+                    snprintf(msg, 256, "Error: pthread_join() (to %s:%hu) in wait_conn_list()",
+                             list->ip, list->port);
+                    perror(msg);
+                }
             }
             else
             {
@@ -211,7 +224,12 @@ void wait_conn_list(struct conn_list *list)
                 ts.tv_sec += 5;
                 s = pthread_timedjoin_np(ptr->thread, NULL, &ts);
                 if (s != 0)
-                    perror("Cannot wait for this thread to stop in wait_conn_list()\n");
+                {
+                    char msg[256] = {0};
+                    snprintf(msg, 256, "Error: pthread_timedjoin_np() (to %s:%hu) in wait_conn_list()",
+                             list->ip, list->port);
+                    perror(msg);
+                }
             }
             ptr = ptr->next;
         }
@@ -240,5 +258,6 @@ void clear_conn_list(struct conn_list *list)
 void print_conn_list(struct conn_list *list)
 {
     if (list)
-        printf("%s:%hu  total connection number: %u  available connection number: %u  flows finished: %u\n", list->ip, list->port, list->len, list->available_len, list->flow_finished);
+        printf("%s:%hu  total connections: %u  available connections: %u  flows finished: %u\n",
+               list->ip, list->port, list->len, list->available_len, list->flow_finished);
 }
