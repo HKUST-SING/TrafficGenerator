@@ -177,12 +177,12 @@ int main(int argc, char *argv[])
     cleanup();
 
     /* parse results */
-    printf("===========================================\n");
-    printf("Flow completion times (FCT) results\n");
-    printf("===========================================\n");
     if (strlen(result_script_name) > 0)
     {
-        char cmd[180] = {'\0'};
+        printf("===========================================\n");
+        printf("Flow completion times (FCT) results\n");
+        printf("===========================================\n");
+        char cmd[180] = {0};
         sprintf(cmd, "python %s %s", result_script_name, fct_log_name);
         system(cmd);
     }
