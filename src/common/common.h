@@ -20,11 +20,11 @@ struct flow_metadata
 /* default number of backlogged connections for listen() */
 #define TG_SERVER_BACKLOG_CONN SOMAXCONN
 /* maximum number of bytes to write in a 'send' system call */
-#define TG_MAX_WRITE 1048576
+#define TG_MAX_WRITE (1 << 20)
 /* minimum number of bytes to write in a 'send' system call (used with rate limiting) */
-#define TG_MIN_WRITE 65536
+#define TG_MIN_WRITE (1 << 16)
 /* maximum amount of data to read in a 'recv' system call */
-#define TG_MAX_READ 1048576
+#define TG_MAX_READ (1 << 20)
 /* default initial number of TCP connections per pair */
 #define TG_PAIR_INIT_CONN 5
 /* default goodput / link capacity ratio */
@@ -71,7 +71,7 @@ double poission_gen_interval(double avg_rate);
 unsigned int get_usleep_overhead(int iter_num);
 
 /* randomly generate a value based on weights */
-unsigned int gen_value_weight(unsigned int *values, unsigned int *weights, unsigned int len, unsigned int weight_total);
+unsigned int gen_value_weight(unsigned int *vals, unsigned int *weights, unsigned int len, unsigned int weight_total);
 
 /* display progress */
 void display_progress(unsigned int num_finished, unsigned int num_total);

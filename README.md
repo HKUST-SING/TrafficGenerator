@@ -9,7 +9,7 @@ The **client** establishes *persistent TCP connections* to a list of servers and
 In the **client configuration file**, the user can specify the list of destination servers, the request size distribution, the Differentiated Services Code Point (DSCP) value distribution, the sending rate distribution and the request fanout distribution, . 
 
 ## Build
-In the main directory, run ```make```, then you will see **client**, **incast-client**, **simple-client** (generate static flows for simple test) and **server** in ./bin.    
+In the main directory, run ```make```, then you will see **client**, **incast-client**, **simple-client** (generate static flows for simple test), **server** and some python scripts in ./bin.    
 
 ## Quick Start
 In the main directory, do following operations:
@@ -20,12 +20,12 @@ In the main directory, do following operations:
 
 - Start client
 ```
-./bin/client -b 900 -c conf/client_config.txt -n 5000 -l flows.txt -s 123 -r src/script/result.py
+./bin/client -b 900 -c conf/client_config.txt -n 5000 -l flows.txt -s 123 -r bin/result.py
 ```
 
 - Start incast-client
 ```
-./bin/incast-client -b 900 -c conf/incast_client_config.txt -n 5000 -l log -s 123 -r src/script/result.py
+./bin/incast-client -b 900 -c conf/incast_client_config.txt -n 5000 -l log -s 123 -r bin/result.py
 ```
 
 ## Command Line Arguments
@@ -45,7 +45,7 @@ Example:
 ### Client
 Example:
 ```
-./bin/client -b 900 -c conf/client_config.txt -n 5000 -l flows.txt -s 123 -r src/script/result.py
+./bin/client -b 900 -c conf/client_config.txt -n 5000 -l flows.txt -s 123 -r bin/result.py
 ```
 * **-b** : expected average RX **bandwidth** in Mbits/sec
  
@@ -70,7 +70,7 @@ Note that you need to specify either the number of requests (-n) or the time to 
 ### Incast-Client
 Example:
 ```
-./bin/incast-client -b 900 -c conf/incast_client_config.txt -l log -s 123 -r src/script/result.py
+./bin/incast-client -b 900 -c conf/incast_client_config.txt -l log -s 123 -r bin/result.py
 ```
 
 Same as **client** except for **-l**
@@ -123,14 +123,48 @@ fanout 8 20
 For each request, the client chooses a fanout with a probability proportional to the weight. For example, with the above configuration, half the requests have fanout 1, and 20% have fanout 8. If the user does not specify the fanout distribution, the fanout size is always 1 for all requests.
 
 ##Output
-A successful run of **client** creates a file with flow completion time results. A successful run of **incast-client** creates two files with flow completion time results and request completion time results, respectively. You can directly use ./src/script/result.py to parse these files. 
+A successful run of **client** creates a file with flow completion time results. A successful run of **incast-client** creates two files with flow completion time results and request completion time results, respectively. You can directly use ./bin/result.py to parse these files. 
 
 In files with flow completion times, each line gives flow size (in bytes), flow completion time (in microseconds), DSCP value, desired sending rate (in Mbps) and actual per-flow goodput (in Mbps). 
 
-In files with request completion times, each line gives request size (in bytes), request completion time (in microseconds), DSCP value, desired sending rate (in Mbps), actual per-request goodput (in Mbps) and request fanout size.  
+In files with request completion times, each line gives request size (in bytes), request completion time (in microseconds), DSCP value, desired sending rate (in Mbps), actual per-request goodput (in Mbps) and request fanout size.
 
-##Miscellaneous
-If you use the traffic generator in your research work, please acknowledge the source and cite [MQ-ECN](https://www.usenix.org/conference/nsdi16/technical-sessions/presentation/bai) paper (the traffic generator was initially developed as part of MQ-ECN project). For questions, please contact [Wei Bai](http://sing.cse.ust.hk/~wei/).
+##Contact
+For questions, please contact Wei Bai (http://sing.cse.ust.hk/~wei/).
+
+##Publications
+- Paper on Traffic Generator: please use the citation below as the reference to Traffic Generator
+```
+Enabling ECN in Multi-Service Multi-Queue Data Centers
+Wei Bai, Li Chen, Kai Chen, Haitao Wu
+USENIX NSDI 2016
+
+@inproceedings {194968,
+    author = {Wei Bai and Li Chen and Kai Chen and Haitao Wu},
+    title = {Enabling ECN in Multi-Service Multi-Queue Data Centers},
+    booktitle = {13th USENIX Symposium on Networked Systems Design and Implementation (NSDI 16)},
+    year = {2016},
+    month = Mar,
+    isbn = {978-1-931971-29-4},
+    address = {Santa Clara, CA},
+    pages = {537--549},
+    url = {https://www.usenix.org/conference/nsdi16/technical-sessions/presentation/bai},
+    publisher = {USENIX Association},
+}
+```
+
+- Papers that use Traffic Generator:
+```
+ClickNP: Highly Flexible and High-performance Network Processing with Reconfigurable Hardware
+Bojie Li, Kun Tan, Larry Luo, Renqian Luo, Yanqing Peng, Ningyi Xu, Yongqiang Xiong, Peng Cheng, Enhong Chen
+ACM SIGCOMM 2016
+
+Fast and Cautious: Leveraging Multi-path Diversity for Transport Loss Recovery in Data Centers
+Guo Chen, Yuanwei Lu, Yuan Meng, Bojie Li, Kun Tan, Dan Pei, Peng Cheng, Larry Luo, Yongqiang Xiong, Xiaoliang Wang, Youjian Zhao
+USENIX ATC 2016
+```
+
+
 
 
 
