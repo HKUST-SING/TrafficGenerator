@@ -127,10 +127,44 @@ A successful run of **client** creates a file with flow completion time results.
 
 In files with flow completion times, each line gives flow size (in bytes), flow completion time (in microseconds), DSCP value, desired sending rate (in Mbps) and actual per-flow goodput (in Mbps). 
 
-In files with request completion times, each line gives request size (in bytes), request completion time (in microseconds), DSCP value, desired sending rate (in Mbps), actual per-request goodput (in Mbps) and request fanout size.  
+In files with request completion times, each line gives request size (in bytes), request completion time (in microseconds), DSCP value, desired sending rate (in Mbps), actual per-request goodput (in Mbps) and request fanout size.
 
-##Miscellaneous
-If you use the traffic generator in your research work, please acknowledge the source and cite [MQ-ECN](https://www.usenix.org/conference/nsdi16/technical-sessions/presentation/bai) paper (the traffic generator was initially developed as part of MQ-ECN project). For questions, please contact [Wei Bai](http://sing.cse.ust.hk/~wei/).
+##Contact
+For questions, please contact Wei Bai (http://sing.cse.ust.hk/~wei/).
+
+##Publications
+- Paper on Traffic Generator: please use the citation below as the reference to Traffic Generator
+```
+Enabling ECN in Multi-Service Multi-Queue Data Centers
+Wei Bai, Li Chen, Kai Chen, Haitao Wu
+USENIX NSDI 2016
+
+@inproceedings {194968,
+    author = {Wei Bai and Li Chen and Kai Chen and Haitao Wu},
+    title = {Enabling ECN in Multi-Service Multi-Queue Data Centers},
+    booktitle = {13th USENIX Symposium on Networked Systems Design and Implementation (NSDI 16)},
+    year = {2016},
+    month = Mar,
+    isbn = {978-1-931971-29-4},
+    address = {Santa Clara, CA},
+    pages = {537--549},
+    url = {https://www.usenix.org/conference/nsdi16/technical-sessions/presentation/bai},
+    publisher = {USENIX Association},
+}
+```
+
+Papers that use Traffic Generator:
+```
+ClickNP: Highly Flexible and High-performance Network Processing with Reconfigurable Hardware
+Bojie Li, Kun Tan, Larry Luo, Renqian Luo, Yanqing Peng, Ningyi Xu, Yongqiang Xiong, Peng Cheng, Enhong Chen
+ACM SIGCOMM 2016
+
+Fast and Cautious: Leveraging Multi-path Diversity for Transport Loss Recovery in Data Centers
+Guo Chen, Yuanwei Lu, Yuan Meng, Bojie Li, Kun Tan, Dan Pei, Peng Cheng, Larry Luo, Yongqiang Xiong, Xiaoliang Wang, Youjian Zhao
+USENIX ATC 2016
+```
+
+
 
 
 
