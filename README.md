@@ -153,7 +153,7 @@ USENIX NSDI 2016
 }
 ```
 
-Papers that use Traffic Generator:
+- Papers that use Traffic Generator:
 ```
 ClickNP: Highly Flexible and High-performance Network Processing with Reconfigurable Hardware
 Bojie Li, Kun Tan, Larry Luo, Renqian Luo, Yanqing Peng, Ningyi Xu, Yongqiang Xiong, Peng Cheng, Enhong Chen
