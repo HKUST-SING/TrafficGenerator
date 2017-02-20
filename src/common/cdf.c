@@ -123,11 +123,13 @@ double rand_range(double min, double max)
 double gen_random_cdf(struct cdf_table *table)
 {
     int i = 0;
-    double x = rand_range(table->min_cdf, table->max_cdf);
+    double x;
     /* printf("%f %f %f\n", x, table->min_cdf, table->max_cdf); */
 
     if (!table)
         return 0;
+
+    x = rand_range(table->min_cdf, table->max_cdf);
 
     for (i = 0; i < table->num_entry; i++)
     {
