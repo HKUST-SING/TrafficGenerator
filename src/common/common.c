@@ -229,7 +229,7 @@ void remove_newline(char *str)
 double poission_gen_interval(double avg_rate)
 {
     if (avg_rate > 0)
-        return -logf(1.0 - (double)rand() / RAND_MAX) / avg_rate;
+        return -logf(1.0 - (double)(rand() % RAND_MAX) / RAND_MAX) / avg_rate;
     else
         return 0;
 }
