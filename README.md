@@ -47,7 +47,7 @@ Example:
 ```
 ./bin/client -b 900 -c conf/client_config.txt -n 5000 -l flows.txt -s 123 -r bin/result.py
 ```
-* **-b** : expected average RX **bandwidth** in Mbits/sec
+* **-b** : desired average RX **bandwidth** in Mbits/sec
  
 * **-c** : **configuration** file which specifies workload characteristics (required)
 
